@@ -1,0 +1,285 @@
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import type { PostgrestError } from '@supabase/supabase-js'
+import { supabase } from '../lib/supabase'
+import { friendly } from '../lib/errors'
+import { generateTiebreakSteps } from '../lib/scoring'
+import { buttonQuiet, card, h1, h2, iconButton, input, label } from '../components/ui'
+
+type Component = { id: string; name: string; min_points: number; max_points: number; step: number; sort: number }
+type Category = { id: string; name: string; sort: number; drop_rank: number | null; components: Component[] }
+type Step = { step_no: number; category_ids: string[] }
+type Contest = {
+  id: string; name: string; status: string; aggregation: string; threshold_pct: number | null
+  anonymize_comments: boolean; event_id: string; events: { name: string } | null
+}
+
+const num = (s: string) => (s.trim() === '' ? null : Number(s))
+const fmt = (n: number) => Number(n.toFixed(2)).toString()
+
+export function ContestSetup() {
+  const { contestId = '' } = useParams()
+  const [contest, setContest] = useState<Contest | null>(null)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [steps, setSteps] = useState<Step[]>([])
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    const [c, cats, st] = await Promise.all([
+      supabase.from('contests')
+        .select('id, name, status, aggregation, threshold_pct, anonymize_comments, event_id, events(name)')
+        .eq('id', contestId).maybeSingle(),
+      supabase.from('categories')
+        .select('id, name, sort, drop_rank, components(id, name, min_points, max_points, step, sort)')
+        .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
+      supabase.from('tiebreak_steps').select('step_no, category_ids').eq('contest_id', contestId).order('step_no'),
+    ])
+    const failed = c.error ?? cats.error ?? st.error
+    if (failed) return setError(friendly(failed))
+    if (!c.data) return setError("This contest doesn't exist, or you're not a member of its organization.")
+    setContest(c.data)
+    setCategories(cats.data ?? [])
+    setSteps(st.data ?? [])
+  }, [contestId])
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState runs after the awaits
+  useEffect(() => { load() }, [load])
+
+  // Run one or more writes, surface the first error, then reload everything (rubrics are small).
+  async function run(...writes: PromiseLike<{ error: PostgrestError | null }>[]) {
+    setBusy(true)
+    const results = await Promise.all(writes)
+    const failed = results.find(r => r.error)?.error
+    setError(failed ? friendly(failed) : '')
+    await load()
+    setBusy(false)
+    return !failed
+  }
+
+  // Blur-to-save fields: if the database rejects the value, put the saved value back so the screen never lies.
+  const saveField = async (el: HTMLInputElement, saved: string | number | null, write: () => Promise<boolean>) => {
+    if (!(await write())) el.value = saved == null ? '' : String(saved)
+  }
+
+  if (!contest) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
+
+  const locked = contest.status !== 'draft'
+  const perJudgeMax = categories.reduce((s, c) => s + c.components.reduce((t, k) => t + k.max_points, 0), 0)
+  const dropOrder = [...categories].sort((a, b) => (a.drop_rank ?? Infinity) - (b.drop_rank ?? Infinity))
+  const catName = new Map(categories.map(c => [c.id, c.name]))
+
+  const updateContest = (patch: Partial<Pick<Contest, 'name' | 'aggregation' | 'threshold_pct' | 'anonymize_comments'>>) =>
+    run(supabase.from('contests').update(patch).eq('id', contest.id))
+  const updateCategory = (id: string, patch: Partial<Pick<Category, 'name'>>) => run(supabase.from('categories').update(patch).eq('id', id))
+  const updateComponent = (id: string, patch: Partial<Component>) => run(supabase.from('components').update(patch).eq('id', id))
+
+  const addCategory = () => run(supabase.from('categories').insert({
+    contest_id: contest.id, name: 'New category',
+    sort: Math.max(0, ...categories.map(c => c.sort)) + 1,
+    drop_rank: categories.length + 1, // new categories are dropped last
+  }))
+  const deleteCategory = (c: Category) => {
+    if (window.confirm(`Delete "${c.name}" and its ${c.components.length} component(s)?`)) {
+      run(supabase.from('categories').delete().eq('id', c.id))
+    }
+  }
+  const addComponent = (c: Category) => run(supabase.from('components').insert({
+    category_id: c.id, name: 'New component', min_points: 0, max_points: 10, step: 1,
+    sort: Math.max(0, ...c.components.map(k => k.sort)) + 1,
+  }))
+
+  // Reorder by swapping two neighbours, then rewriting every position (lists are short).
+  const reorder = (list: Category[], i: number, j: number, field: 'sort' | 'drop_rank') => {
+    const order = [...list]
+    ;[order[i], order[j]] = [order[j]!, order[i]!]
+    return run(...order.map((c, idx) => supabase.from('categories').update(field === 'sort' ? { sort: idx + 1 } : { drop_rank: idx + 1 }).eq('id', c.id)))
+  }
+
+  const regenerateSteps = async () => {
+    const generated = generateTiebreakSteps(categories.map(c => ({ id: c.id, dropRank: c.drop_rank })))
+    setBusy(true)
+    const del = await supabase.from('tiebreak_steps').delete().eq('contest_id', contest.id)
+    if (del.error) { setError(friendly(del.error)); setBusy(false); return }
+    await run(generated.length
+      ? supabase.from('tiebreak_steps').insert(generated.map((ids, i) => ({ contest_id: contest.id, step_no: i + 1, category_ids: ids })))
+      : Promise.resolve({ error: null }))
+  }
+  const toggleStepCategory = (s: Step, catId: string) => {
+    const ids = s.category_ids.includes(catId) ? s.category_ids.filter(id => id !== catId) : [...s.category_ids, catId]
+    const q = supabase.from('tiebreak_steps')
+    return run(ids.length
+      ? q.update({ category_ids: ids }).eq('contest_id', contest.id).eq('step_no', s.step_no)
+      : q.delete().eq('contest_id', contest.id).eq('step_no', s.step_no))
+  }
+  const addStep = () => run(supabase.from('tiebreak_steps').insert({
+    contest_id: contest.id, step_no: Math.max(0, ...steps.map(s => s.step_no)) + 1, category_ids: categories.map(c => c.id),
+  }))
+
+  return (
+    <div className="grid gap-10">
+      <div className="grid gap-1">
+        <Link to={`/e/${contest.event_id}`} className="text-sm text-accent">← {contest.events?.name}</Link>
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h1 className={h1}>{contest.name}</h1>
+          <span className="font-mono text-sm text-muted">{contest.status}</span>
+        </div>
+      </div>
+
+      {locked && (
+        <p className={`${card} px-4 py-3`}>
+          🔒 Scoring has started, so the rubric, scoring method and threshold are locked. You can still rename the contest.
+        </p>
+      )}
+      {error && <p role="alert" className="rounded border border-danger px-4 py-3 text-danger">{error}</p>}
+
+      <fieldset disabled={busy} className="grid gap-10">
+        {/* ── Settings ── */}
+        <section className="grid gap-4">
+          <h2 className={h2}>Settings</h2>
+          <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
+            <div className="grid gap-1">
+              <label htmlFor="c-name" className={label}>Contest name</label>
+              <input id="c-name" key={contest.name} defaultValue={contest.name} maxLength={120} className={input}
+                onBlur={e => e.target.value.trim() && e.target.value !== contest.name && saveField(e.target, contest.name, () => updateContest({ name: e.target.value.trim() }))} />
+            </div>
+            <div className="grid gap-1">
+              <label htmlFor="c-agg" className={label}>Combining judges' scores</label>
+              <select id="c-agg" value={contest.aggregation} disabled={locked} className={input}
+                onChange={e => updateContest({ aggregation: e.target.value })}>
+                <option value="sum">Add up every judge</option>
+                <option value="drop_high_low">Drop each category's highest and lowest judge (needs 5+ judges)</option>
+              </select>
+            </div>
+            <div className="grid gap-1">
+              <label htmlFor="c-threshold" className={label}>Minimum to award the title (% of max possible)</label>
+              <input id="c-threshold" key={String(contest.threshold_pct)} type="number" min={0} max={100} step="0.5"
+                placeholder="No minimum" defaultValue={contest.threshold_pct ?? ''} disabled={locked} className={input}
+                onBlur={e => num(e.target.value) !== contest.threshold_pct && saveField(e.target, contest.threshold_pct, () => updateContest({ threshold_pct: num(e.target.value) }))} />
+              <p className="text-xs text-muted">
+                {contest.threshold_pct == null
+                  ? 'Leave blank to always award the title.'
+                  : `A contestant needs ${contest.threshold_pct}% of the maximum possible points to win the title.`}
+              </p>
+            </div>
+            <label className="flex items-center gap-2 self-center">
+              <input type="checkbox" checked={contest.anonymize_comments}
+                onChange={e => updateContest({ anonymize_comments: e.target.checked })} />
+              <span>Hide judges' names on feedback sent to contestants</span>
+            </label>
+          </div>
+        </section>
+
+        {/* ── Rubric ── */}
+        <section className="grid gap-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className={h2}>Scoresheet</h2>
+            <p className="font-mono text-sm">Max per judge: <strong>{fmt(perJudgeMax)}</strong> pts</p>
+          </div>
+          {categories.length === 0 && <p className="text-muted">Add the categories judges score, like Speech, Interview or Fantasy.</p>}
+          {categories.map((c, i) => (
+            <div key={c.id} className={`${card} grid gap-3 p-4`}>
+              <div className="flex flex-wrap items-center gap-2">
+                <input aria-label="Category name" key={c.name} defaultValue={c.name} maxLength={120} disabled={locked}
+                  className={`${input} flex-1 font-semibold`}
+                  onBlur={e => e.target.value.trim() && e.target.value !== c.name && saveField(e.target, c.name, () => updateCategory(c.id, { name: e.target.value.trim() }))} />
+                <span className="font-mono text-sm text-muted">{fmt(c.components.reduce((s, k) => s + k.max_points, 0))} pts</span>
+                {!locked && <>
+                  <button type="button" className={iconButton} aria-label={`Move ${c.name} up`} disabled={i === 0}
+                    onClick={() => reorder(categories, i, i - 1, 'sort')}>↑</button>
+                  <button type="button" className={iconButton} aria-label={`Move ${c.name} down`} disabled={i === categories.length - 1}
+                    onClick={() => reorder(categories, i, i + 1, 'sort')}>↓</button>
+                  <button type="button" className={iconButton} aria-label={`Delete ${c.name}`} onClick={() => deleteCategory(c)}>✕</button>
+                </>}
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-muted">
+                    <tr><th className="py-1 font-normal">Component</th><th className="w-24 font-normal">Min</th><th className="w-24 font-normal">Max</th><th className="w-24 font-normal">Step</th><th className="w-10" /></tr>
+                  </thead>
+                  <tbody>
+                    {c.components.map(k => (
+                      <tr key={k.id}>
+                        <td className="py-1 pr-2">
+                          <input aria-label="Component name" key={k.name} defaultValue={k.name} maxLength={120} disabled={locked} className={input}
+                            onBlur={e => e.target.value.trim() && e.target.value !== k.name && saveField(e.target, k.name, () => updateComponent(k.id, { name: e.target.value.trim() }))} />
+                        </td>
+                        {(['min_points', 'max_points', 'step'] as const).map(f => (
+                          <td key={f} className="pr-2">
+                            <input aria-label={`${k.name} ${f.replace('_points', '')}`} key={k[f]} type="number" min={0} step="0.25"
+                              defaultValue={k[f]} disabled={locked} className={`${input} font-mono`}
+                              onBlur={e => { const v = num(e.target.value); if (v != null && v !== k[f]) saveField(e.target, k[f], () => updateComponent(k.id, { [f]: v })) }} />
+                          </td>
+                        ))}
+                        <td>
+                          {!locked && <button type="button" className={iconButton} aria-label={`Delete ${k.name}`}
+                            onClick={() => run(supabase.from('components').delete().eq('id', k.id))}>✕</button>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {!locked && <button type="button" className={`${buttonQuiet} justify-self-start`} onClick={() => addComponent(c)}>+ Add component</button>}
+            </div>
+          ))}
+          {!locked && <button type="button" className={`${buttonQuiet} justify-self-start`} onClick={addCategory}>+ Add category</button>}
+        </section>
+
+        {/* ── Tiebreaks ── */}
+        <section className="grid gap-4">
+          <h2 className={h2}>Tiebreaks</h2>
+          <p className="max-w-prose text-sm text-muted">
+            When contestants tie on total, each step re-totals only the listed categories. Steps are tried in order until the tie breaks.
+            If it never breaks, you choose the winner.
+          </p>
+          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+            <div className="grid content-start gap-2">
+              <h3 className="font-semibold">Drop order</h3>
+              <p className="text-xs text-muted">First category listed is dropped first.</p>
+              <ol className={`${card} divide-y divide-rule`}>
+                {dropOrder.map((c, i) => (
+                  <li key={c.id} className="flex items-center gap-2 px-3 py-2">
+                    <span className="w-5 font-mono text-xs text-muted">{i + 1}</span>
+                    <span className="flex-1 truncate">{c.name}</span>
+                    {!locked && <>
+                      <button type="button" className={iconButton} aria-label={`Drop ${c.name} earlier`} disabled={i === 0} onClick={() => reorder(dropOrder, i, i - 1, 'drop_rank')}>↑</button>
+                      <button type="button" className={iconButton} aria-label={`Drop ${c.name} later`} disabled={i === dropOrder.length - 1} onClick={() => reorder(dropOrder, i, i + 1, 'drop_rank')}>↓</button>
+                    </>}
+                  </li>
+                ))}
+              </ol>
+              {!locked && categories.length > 1 && (
+                <button type="button" className={`${buttonQuiet} justify-self-start`} onClick={regenerateSteps}>Rebuild steps from drop order</button>
+              )}
+            </div>
+
+            <div className="grid content-start gap-2">
+              <h3 className="font-semibold">Steps</h3>
+              {steps.length === 0 && <p className="text-sm text-muted">No tiebreak steps. Ties will go straight to your decision.</p>}
+              {steps.map((s, i) => (
+                <div key={s.step_no} className={`${card} flex flex-wrap items-center gap-2 px-3 py-2`}>
+                  <span className="w-14 font-mono text-xs text-muted">Step {i + 1}</span>
+                  {categories.map(c => {
+                    const on = s.category_ids.includes(c.id)
+                    return (
+                      <button key={c.id} type="button" aria-pressed={on} disabled={locked}
+                        className={`rounded-full border px-3 py-0.5 text-sm ${on ? 'border-accent bg-accent text-on-accent' : 'border-rule text-muted line-through'}`}
+                        onClick={() => toggleStepCategory(s, c.id)}>
+                        {catName.get(c.id)}
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+              {!locked && categories.length > 0 && (
+                <button type="button" className={`${buttonQuiet} justify-self-start`} onClick={addStep}>+ Add step</button>
+              )}
+            </div>
+          </div>
+        </section>
+      </fieldset>
+    </div>
+  )
+}

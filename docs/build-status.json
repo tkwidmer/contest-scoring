@@ -172,14 +172,16 @@
             {
               "id": "P1.2.2",
               "title": "Rubric builder UI + settings",
-              "status": "todo",
-              "doc": "design/04-ux-flows.md"
+              "status": "done",
+              "doc": "design/04-ux-flows.md",
+              "note": "Events, contests, settings, rubric editor with live max-per-judge"
             },
             {
               "id": "P1.2.3",
               "title": "Tiebreak builder UI",
-              "status": "todo",
-              "doc": "design/04-ux-flows.md"
+              "status": "done",
+              "doc": "design/04-ux-flows.md",
+              "note": "Drop order + generated, editable steps"
             },
             {
               "id": "P1.2.4",

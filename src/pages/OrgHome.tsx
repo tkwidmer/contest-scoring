@@ -1,40 +1,95 @@
-import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { friendly } from '../lib/errors'
+import { button, card, h1, h2, input, label } from '../components/ui'
 
 type Member = { user_id: string; role: string; profiles: { display_name: string | null } | null }
+type Event = { id: string; name: string; starts_on: string | null; venue: string | null }
 
 export function OrgHome() {
   const { orgId = '' } = useParams()
+  const navigate = useNavigate()
   const [name, setName] = useState<string | null>(null)
+  const [isProducer, setIsProducer] = useState(false)
   const [members, setMembers] = useState<Member[]>([])
+  const [events, setEvents] = useState<Event[]>([])
+  const [form, setForm] = useState({ name: '', starts_on: '', venue: '' })
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    Promise.all([
+  const load = useCallback(async () => {
+    const [org, mem, ev, me] = await Promise.all([
       supabase.from('orgs').select('name').eq('id', orgId).maybeSingle(),
       supabase.from('org_members').select('user_id, role, profiles(display_name)').eq('org_id', orgId),
-    ]).then(([org, mem]) => {
-      if (org.error || mem.error) return setError((org.error ?? mem.error)!.message)
-      if (!org.data) return setError("This organization doesn't exist, or you're not a member.")
-      setName(org.data.name)
-      setMembers(mem.data ?? [])
-    })
+      supabase.from('events').select('id, name, starts_on, venue').eq('org_id', orgId).order('starts_on', { ascending: false, nullsFirst: true }),
+      supabase.auth.getUser(),
+    ])
+    const failed = org.error ?? mem.error ?? ev.error
+    if (failed) return setError(friendly(failed))
+    if (!org.data) return setError("This organization doesn't exist, or you're not a member.")
+    setName(org.data.name)
+    setMembers(mem.data ?? [])
+    setEvents(ev.data ?? [])
+    setIsProducer((mem.data ?? []).some(m => m.user_id === me.data.user?.id && m.role === 'producer'))
   }, [orgId])
 
-  if (error) return <p role="alert" className="text-danger">{error}</p>
-  if (name === null) return <p className="text-muted">Loading…</p>
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState runs after the awaits
+  useEffect(() => { load() }, [load])
+
+  async function createEvent(e: FormEvent) {
+    e.preventDefault()
+    const { data, error } = await supabase.from('events')
+      .insert({ org_id: orgId, name: form.name, starts_on: form.starts_on || null, venue: form.venue || null })
+      .select('id').single()
+    if (error) return setError(friendly(error))
+    navigate(`/e/${data.id}`)
+  }
+
+  if (name === null) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
   return (
-    <div className="grid gap-8">
-      <h1 className="font-display text-3xl font-extrabold uppercase">{name}</h1>
-      <section className="grid gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">Events</h2>
-        <p className="text-muted">Events and contests arrive in P1.</p>
+    <div className="grid gap-10">
+      <h1 className={h1}>{name}</h1>
+
+      <section className="grid gap-3">
+        <h2 className={h2}>Events</h2>
+        {events.length === 0 ? (
+          <p className="text-muted">No events yet.{isProducer && ' Create your first one below.'}</p>
+        ) : (
+          <ul className="grid gap-2">
+            {events.map(ev => (
+              <li key={ev.id}>
+                <Link to={`/e/${ev.id}`} className={`${card} flex flex-wrap justify-between gap-2 px-4 py-3 hover:border-accent`}>
+                  <span className="font-medium">{ev.name}</span>
+                  <span className="text-sm text-muted">{[ev.starts_on, ev.venue].filter(Boolean).join(' · ')}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        {isProducer && (
+          <form onSubmit={createEvent} className="grid max-w-2xl gap-3 sm:grid-cols-[2fr_1fr_1.5fr_auto] sm:items-end">
+            <div className="grid gap-1">
+              <label htmlFor="ev-name" className={label}>Event name</label>
+              <input id="ev-name" required maxLength={120} placeholder="Great Lakes Leather Weekend 2027" className={input}
+                value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="grid gap-1">
+              <label htmlFor="ev-date" className={label}>Starts</label>
+              <input id="ev-date" type="date" className={input} value={form.starts_on} onChange={e => setForm({ ...form, starts_on: e.target.value })} />
+            </div>
+            <div className="grid gap-1">
+              <label htmlFor="ev-venue" className={label}>Venue</label>
+              <input id="ev-venue" className={input} value={form.venue} onChange={e => setForm({ ...form, venue: e.target.value })} />
+            </div>
+            <button className={button}>Create event</button>
+          </form>
+        )}
       </section>
-      <section className="grid gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">Members</h2>
-        <ul className="divide-y divide-rule rounded border border-rule bg-surface">
+
+      <section className="grid gap-3">
+        <h2 className={h2}>Members</h2>
+        <ul className={`${card} divide-y divide-rule`}>
           {members.map(m => (
             <li key={m.user_id} className="flex justify-between px-4 py-2">
               <span>{m.profiles?.display_name ?? 'Unnamed'}</span>
@@ -43,6 +98,7 @@ export function OrgHome() {
           ))}
         </ul>
       </section>
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </div>
   )
 }
