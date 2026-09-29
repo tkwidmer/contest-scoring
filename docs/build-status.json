@@ -107,9 +107,9 @@
             {
               "id": "P0.2.2",
               "title": "Vercel project, env vars, SPA rewrite",
-              "status": "blocked",
+              "status": "done",
               "doc": "design/05-architecture.md",
-              "note": "Vercel connector lacks create permission; import in the dashboard"
+              "note": "Live at contest-scoring.vercel.app"
             }
           ]
         },
@@ -280,7 +280,8 @@
               "id": "P2.1.3",
               "title": "Custom SMTP for auth email",
               "status": "todo",
-              "doc": "design/03-auth-rls.md"
+              "doc": "design/03-auth-rls.md",
+              "note": "Required before anyone but you can sign in (default sender only emails the Supabase team). Also enables the 6-digit code template"
             }
           ]
         },
