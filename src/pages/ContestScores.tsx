@@ -114,9 +114,13 @@ export function ContestScores() {
     queue.set(cell)
   }
   const hasProducer = categories.some(c => c.scored_by === 'producer')
-  // Who fills in a category: producer-entered ones have one column; judge-scored ones have the panel plus any cross-panel judges.
-  const scores = (key: string, cat: Category) => key === PRODUCER ? cat.scored_by === 'producer'
-    : cat.scored_by === 'judges' && (!judges.find(j => j.id === key)?.guest || cat.guest_average)
+  // Who fills in a category: producer-entered ones have one column; cross-panel ones only the cross-panel judges;
+  // the rest the panel, plus the cross-panel judges when their average counts.
+  const scores = (key: string, cat: Category) => {
+    if (key === PRODUCER) return cat.scored_by === 'producer'
+    const guest = !!judges.find(j => j.id === key)?.guest
+    return cat.scored_by === 'cross_panel' ? guest : cat.scored_by === 'judges' && (!guest || cat.guest_average)
+  }
   const columnsFor = (cat: Category) => cat.scored_by === 'producer' ? [{ id: PRODUCER, name: 'Producer' }] : judges.filter(j => scores(j.id, cat))
   const allColumns = [...judges, ...(hasProducer ? [{ id: PRODUCER, name: 'Producer', guest: false }] : [])]
   const cellProps = (key: string, contestant_id: string, k: Component, label: string) => {

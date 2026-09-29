@@ -16,7 +16,7 @@ type Spec = {
   categories: Record<string, Record<string, number>>
   // contestant -> component -> one value per judge (null = not entered)
   scores: Record<string, Record<string, (number | null)[]>>
-  recusals?: [judgeNo: number, contestant: string][]
+  recusals?: [judge: number | string, contestant: string][] // a number is panel judge Jn; a string is any judge id
   steps?: (string[] | TiebreakStep)[] // plain arrays are ordinary (dropped-judge) steps
   withdrawn?: string[]
   manualWinnerId?: string
@@ -42,7 +42,7 @@ function build(s: Spec): ScoringInput {
     tiebreakSteps: (s.steps ?? []).map(x => (Array.isArray(x) ? { categoryIds: x, allJudges: false } : x)),
     judges,
     contestants: Object.keys(s.scores).map(id => ({ id, withdrawn: s.withdrawn?.includes(id) ?? false })),
-    recusals: (s.recusals ?? []).map(([n, c]) => ({ judgeId: `J${n}`, contestantId: c })),
+    recusals: (s.recusals ?? []).map(([n, c]) => ({ judgeId: typeof n === 'number' ? `J${n}` : n, contestantId: c })),
     scores: Object.entries(s.scores).flatMap(([cid, comps]): ScoringInput['scores'] =>
       Object.entries(comps).flatMap(([componentId, vals]) =>
         vals.flatMap((value, i) => (value == null ? [] : [{ judgeId: judgeAt(i), contestantId: cid, componentId, value }])),
@@ -395,6 +395,51 @@ describe('cross-panel judges', () => {
     const r = computeResults(build({ ...spec, scores: { A: { I: [8, 8, 8, 8, 8, 6, null], S: [5, 6, 7, 8, 9] } } }))
     expect(r.winner.kind).toBe('incomplete')
     expect(r.standings[0]!.breakdown.I!.at(-1)!.subtotal).toBeNull()
+  })
+})
+
+describe('cross-panel categories (scored only by the cross-panel judges)', () => {
+  // IMsBB 2024: the five IMsL judges score a separate interview; their high and low drop and the other three count.
+  const _ = null
+  const spec: Spec = {
+    judges: 5, guests: 5, aggregation: 'drop_high_low', categories: { S: { S: 10 }, X: { X: 100 } },
+    catOptions: { X: { scoredBy: 'cross_panel' } },
+    scores: { A: { S: [5, 6, 7, 8, 9], X: [_, _, _, _, _, 45, 30, 59, 75, 50] } },
+  }
+
+  it('drop their own high and low, apart from the panel', () => {
+    const r = computeResults(build(spec))
+    const a = r.standings[0]!
+    expect(a.categoryTotals).toEqual({ S: 21, X: 154 })
+    expect(r.maxPossible).toBe(330) // S: 3 x 10, X: 3 x 100
+    expect(a.breakdown.X!.map(b => [b.judgeId, b.dropped])).toEqual([['G1', false], ['G2', true], ['G3', false], ['G4', true], ['G5', false]])
+    expect(r.winner).toEqual({ kind: 'decided', contestantId: 'A' })
+  })
+
+  it('report as the average of the counted cross-panel judges', () => {
+    const r = computeResults(build({ ...spec, scores: { A: { S: [5, 6, 7, 8, 9], X: [_, _, _, _, _, 40, 30, 50, 75, 60] } }, reportAs: 'average' }))
+    expect(r.standings[0]!.categoryTotals).toEqual({ S: 7, X: 50 })
+    expect(r.maxPossible).toBe(110)
+  })
+
+  it('a recused cross-panel judge is backfilled from the other cross-panel judges', () => {
+    const r = computeResults(build({ ...spec, recusals: [['G5', 'A']], scores: { A: { S: [5, 6, 7, 8, 9], X: [_, _, _, _, _, 40, 30, 60, 70] } } }))
+    const x = r.standings[0]!.breakdown.X!
+    expect(x.at(-1)).toEqual({ judgeId: 'G5', subtotal: 50, dropped: false, backfilled: true })
+    expect(r.standings[0]!.categoryTotals.X).toBe(150) // drops 30 and 70
+  })
+
+  it('with fewer than 5 cross-panel judges every score counts', () => {
+    const r = computeResults(build({ ...spec, guests: 3, scores: { A: { S: [5, 6, 7, 8, 9], X: [_, _, _, _, _, 40, 30, 50] } } }))
+    expect(r.standings[0]!.categoryTotals.X).toBe(120)
+    expect(r.maxPossible).toBe(330)
+    expect(r.warnings[0]).toMatch(/at least 5 cross-panel judges/)
+  })
+
+  it('the contestant is incomplete until every cross-panel judge has scored', () => {
+    const r = computeResults(build({ ...spec, scores: { A: { S: [5, 6, 7, 8, 9], X: [_, _, _, _, _, 40, 30, 50, 75] } } }))
+    expect(r.winner.kind).toBe('incomplete')
+    expect(r.standings[0]!.completeness).toBeCloseTo(9 / 10)
   })
 })
 

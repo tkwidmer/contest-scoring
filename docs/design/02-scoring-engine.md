@@ -5,7 +5,10 @@ A pure TypeScript module at `src/lib/scoring/` with no I/O and no Supabase impor
 ## Scoring options
 - **Report as average** (`reportAs: 'average'`): each category is its kept judges' total divided by how many were kept; totals, maximum, minimum and tiebreak values are on that scale. Internally values are multiplied by the lcm of the judge counts so arithmetic stays exact.
 - **Producer-entered categories** (`scoredBy: 'producer'`): one score per contestant (stored with no judge), added once on the reported scale.
-- **Cross-panel judges** (`guest` judges, `guestAverage` categories): their mean per component (rounded to 0.01) is one extra value in that category before dropping high and low; they are ignored elsewhere.
+- **Cross-panel judges** (`guest` judges) are judges from another contest at the same event. They take part in one of two ways, chosen per category:
+  - **Averaged in** (`guestAverage` on a panel category, IMsL/IMsBB 2023): the mean of the non-recused cross-panel judges per component (rounded to 0.01) is one extra value in that category before dropping high and low. The contest panel still scores it.
+  - **Their own category** (`scoredBy: 'cross_panel'`, IMsBB 2024): only the cross-panel judges score it, as a separate panel. When the contest drops high and low (either way) and there are at least 5 cross-panel judges, the category drops their highest and lowest scores and the rest count; otherwise every cross-panel score counts, with a warning. The drop is always per category, never by judge totals. Counted judges × category max is added to the maximum possible, so 5 IMsL judges scoring a 100-point interview adds 300 (or 100 when reporting the average).
+  - A recused cross-panel judge is backfilled from the other cross-panel judges, the same way as the panel. Cross-panel judges are ignored in every other category.
 - **Deductions** (`penalties` against a category's `deductions` tiers): points come off the category on the reported scale, per occurrence; percent comes off the aggregated category. Never below zero. Every-judge tiebreak totals get the same deductions.
 - **Lone-contestant minimum** (`thresholdSingleOnly`): the minimum only applies when one contestant competes.
 

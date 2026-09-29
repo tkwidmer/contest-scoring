@@ -17,8 +17,10 @@ export type Category = {
   id: string
   name: string
   components: { id: string; min: number; max: number; step: number }[]
-  scoredBy?: 'judges' | 'producer' // producer: one score per contestant, e.g. a community vote
-  guestAverage?: boolean // cross-panel (guest) judges' average counts as one more judge here
+  // producer: one score per contestant, e.g. a community vote. cross_panel: only the cross-panel (guest) judges
+  // score it, as their own panel: high and low drop when the contest drops them and there are at least 5 guests.
+  scoredBy?: 'judges' | 'producer' | 'cross_panel'
+  guestAverage?: boolean // panel categories only: the guests' average counts as one more judge
   deductions?: Deduction[]
 }
 
@@ -104,12 +106,19 @@ export function computeResults(input: ScoringInput): Result {
 
   const judgeCats = input.categories.filter(c => c.scoredBy !== 'producer')
   const producerCats = input.categories.filter(c => c.scoredBy === 'producer')
-  const components = judgeCats.flatMap(c => c.components)
+  const isCross = (c: Category) => c.scoredBy === 'cross_panel'
+  const components = judgeCats.filter(c => !isCross(c)).flatMap(c => c.components)
+  const crossComponents = judgeCats.filter(isCross).flatMap(c => c.components)
+  const G = guests.length
+  const crossDrop = input.aggregation !== 'sum' && G >= 5
+  if (crossComponents.length && G === 0) warnings.push('Some categories are scored by cross-panel judges, but none are listed, so those categories count for nothing.')
+  else if (crossComponents.length && input.aggregation !== 'sum' && !crossDrop)
+    warnings.push(`Dropping the high & low cross-panel score needs at least 5 cross-panel judges (this contest has ${G}), so their scores are summed instead.`)
   const maxH = new Map(input.categories.flatMap(c => c.components).map(c => [c.id, toH(c.max)]))
   const catMaxH = (c: Category) => sum(c.components.map(k => maxH.get(k.id)!))
-  const hasVirtual = (c: Category) => !!c.guestAverage && guests.length > 0
-  const slots = (c: Category) => J + (hasVirtual(c) ? 1 : 0)
-  const counted = (c: Category) => (aggregation === 'sum' ? slots(c) : slots(c) - 2)
+  const hasVirtual = (c: Category) => !isCross(c) && !!c.guestAverage && G > 0
+  const slots = (c: Category) => (isCross(c) ? G : J + (hasVirtual(c) ? 1 : 0))
+  const counted = (c: Category) => (isCross(c) ? (crossDrop ? G - 2 : G) : aggregation === 'sum' ? slots(c) : slots(c) - 2)
 
   // Internal unit: hundredths x U. Reporting averages divides each category by its judge count, so everything is
   // multiplied by the lcm of those counts to stay in whole numbers (ties remain exact).
@@ -125,12 +134,12 @@ export function computeResults(input: ScoringInput): Result {
   const mean = (xs: number[]) => Math.round(sum(xs) / xs.length) // ponytail: half-up only for non-negative scores
 
   const rows: Row[] = input.contestants.filter(c => !c.withdrawn).map(({ id: cid }) => {
-    // values[panel judge][component], recusals backfilled by the other panel judges' mean (A1, A2)
-    const values = panel.map(j => {
+    // values[judge][component] for one panel, recusals backfilled by the mean of that panel's other judges (A1, A2)
+    const fill = (who: string[], comps: Category['components']) => who.map(j => {
       const byComp = new Map<string, number>()
-      for (const comp of components) {
+      for (const comp of comps) {
         if (recused.has(`${j}|${cid}`)) {
-          const others = panel.filter(o => !recused.has(`${o}|${cid}`))
+          const others = who.filter(o => !recused.has(`${o}|${cid}`))
             .map(o => score.get(`${o}|${cid}|${comp.id}`)).filter((v): v is number => v !== undefined)
           if (others.length) byComp.set(comp.id, mean(others))
         } else {
@@ -140,20 +149,24 @@ export function computeResults(input: ScoringInput): Result {
       }
       return byComp
     })
-    // The cross-panel average: one extra "judge" in guest categories, present once every guest has scored.
+    const values = fill(panel, components)
+    const guestValues = fill(guests, crossComponents)
+    // The cross-panel average: one extra "judge" in guest-average categories, present once every
+    // non-recused guest has scored.
     const virtual = new Map<string, number>()
+    const presentGuests = guests.filter(g => !recused.has(`${g}|${cid}`))
     let guestFilled = 0, guestExpected = 0
     for (const c of judgeCats.filter(hasVirtual)) for (const comp of c.components) {
-      const vs = guests.map(g => score.get(`${g}|${cid}|${comp.id}`)).filter((v): v is number => v !== undefined)
+      const vs = presentGuests.map(g => score.get(`${g}|${cid}|${comp.id}`)).filter((v): v is number => v !== undefined)
       guestFilled += vs.length
-      guestExpected += guests.length
-      if (vs.length === guests.length) virtual.set(comp.id, mean(vs))
+      guestExpected += presentGuests.length
+      if (vs.length && vs.length === presentGuests.length) virtual.set(comp.id, mean(vs))
     }
     const producerComps = producerCats.flatMap(c => c.components)
     const producerFilled = producerComps.filter(k => score.has(`${PRODUCER}|${cid}|${k.id}`)).length
 
-    const expected = J * components.length + guestExpected + producerComps.length
-    const filled = sum(values.map(v => v.size)) + guestFilled + producerFilled
+    const expected = J * components.length + G * crossComponents.length + guestExpected + producerComps.length
+    const filled = sum([...values, ...guestValues].map(v => v.size)) + guestFilled + producerFilled
     const complete = expected > 0 && filled === expected
 
     // Drop exactly one high and one low (A1); among equal values the first judge in order is the one marked.
@@ -187,25 +200,29 @@ export function computeResults(input: ScoringInput): Result {
     }
 
     for (const cat of judgeCats) {
-      const subtotals = values.map(v => sum(cat.components.map(c => v.get(c.id) ?? 0)))
-      const has = values.map(v => cat.components.every(c => v.has(c.id)))
+      const cross = isCross(cat)
+      const [who, vals] = cross ? [guests, guestValues] : [panel, values]
+      const subtotals = vals.map(v => sum(cat.components.map(c => v.get(c.id) ?? 0)))
+      const has = vals.map(v => cat.components.every(c => v.has(c.id)))
       if (hasVirtual(cat)) {
         subtotals.push(sum(cat.components.map(c => virtual.get(c.id) ?? 0)))
         has.push(cat.components.every(c => virtual.has(c.id)))
       }
-      // A category drops its high and low as soon as every judge's scores for it are in.
+      // A category drops its high and low as soon as every judge's scores for it are in. A cross-panel category
+      // always drops within its own category, whichever way the panel drops.
       const catComplete = subtotals.length > 0 && has.every(Boolean)
-      const dropped = aggregation === 'drop_high_low' && catComplete ? highLow(subtotals) : droppedByTotal
+      const dropped = cross ? (crossDrop && catComplete ? highLow(subtotals) : new Set<number>())
+        : aggregation === 'drop_high_low' && catComplete ? highLow(subtotals) : droppedByTotal
       const kept = subtotals.length - dropped.size
       deduct(cat, sum(subtotals.filter((_, i) => !dropped.has(i))) * per(kept), sum(subtotals) * per(subtotals.length))
-      const enteredMaxH = sum(values.flatMap(v => cat.components.filter(c => v.has(c.id)).map(c => maxH.get(c.id)!)))
+      const enteredMaxH = sum(vals.flatMap(v => cat.components.filter(c => v.has(c.id)).map(c => maxH.get(c.id)!)))
         + (hasVirtual(cat) ? sum(cat.components.filter(c => virtual.has(c.id)).map(c => maxH.get(c.id)!)) : 0)
       denomU += dropped.size ? kept * catMaxH(cat) * per(kept) : enteredMaxH * per(subtotals.length)
       breakdown[cat.id] = subtotals.map((st, i) => ({
-        judgeId: i < J ? panel[i]! : CROSS_PANEL,
+        judgeId: i < who.length ? who[i]! : CROSS_PANEL,
         subtotal: has[i] ? fromH(st) : null,
         dropped: dropped.has(i),
-        backfilled: i < J && recused.has(`${panel[i]}|${cid}`),
+        backfilled: i < who.length && recused.has(`${who[i]}|${cid}`),
       }))
     }
 

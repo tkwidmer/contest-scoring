@@ -227,7 +227,7 @@ export function ContestPeople() {
           <h2 className={h2}>Recusals</h2>
           <p className="max-w-prose text-sm text-muted">
             Tick a box when a judge won't score a contestant (a partner, a business tie). Their slot is filled with the
-            average of the other judges' scores for that contestant.
+            average of the other judges' scores for that contestant (a cross-panel judge's, from the other cross-panel judges).
           </p>
           {judges.length === 0 || contestants.length === 0 ? (
             <p className="text-sm text-muted">Add contestants and judges first.</p>
@@ -237,14 +237,14 @@ export function ContestPeople() {
                 <thead>
                   <tr className="border-b border-rule">
                     <th className="px-3 py-2 text-left font-normal text-muted">Contestant</th>
-                    {judges.filter(j => !j.guest).map(j => <th key={j.id} className="px-3 py-2 font-medium">{j.name}</th>)}
+                    {judges.map(j => <th key={j.id} className="px-3 py-2 font-medium">{j.name}{j.guest && <span className="text-xs font-normal text-muted"> (cross-panel)</span>}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {contestants.filter(c => !c.withdrawn).map(c => (
                     <tr key={c.id} className="border-b border-rule last:border-0">
                       <th scope="row" className="px-3 py-1.5 text-left font-normal">{c.number != null && <span className="font-mono text-muted">{c.number} </span>}{c.display_name}</th>
-                      {judges.filter(j => !j.guest).map(j => (
+                      {judges.map(j => (
                         <td key={j.id} className="px-3 text-center">
                           <input type="checkbox" aria-label={`${j.name} recused from ${c.display_name}`}
                             checked={recused.has(`${j.id}|${c.id}`)} onChange={() => toggleRecusal(j.id, c.id)} />

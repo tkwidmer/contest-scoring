@@ -241,6 +241,7 @@ export function ContestSetup() {
                 <select aria-label={`${c.name} scored by`} value={c.scored_by} disabled={locked} className={`${input} w-auto py-1 text-sm`}
                   onChange={e => updateCategory(c.id, { scored_by: e.target.value })}>
                   <option value="judges">Scored by judges</option>
+                  <option value="cross_panel">Scored by cross-panel judges only</option>
                   <option value="producer">Entered once by the producer (e.g. community vote)</option>
                 </select>
                 <span className="font-mono text-sm text-muted">{fmt(catMax(c))} pts</span>
@@ -282,6 +283,12 @@ export function ContestSetup() {
                 </table>
               </div>
               {!locked && <button type="button" className={`${buttonQuiet} justify-self-start`} onClick={() => addComponent(c)}>+ Add component</button>}
+              {c.scored_by === 'cross_panel' && (
+                <p className="text-sm text-muted">
+                  Only the judges marked cross-panel on the People tab score this, as a panel of their own. With 5 or more of them
+                  and a contest that drops high &amp; low, their highest and lowest scores drop and the rest count; otherwise every score counts.
+                </p>
+              )}
               {c.scored_by === 'judges' && (
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={c.guest_average} disabled={locked}

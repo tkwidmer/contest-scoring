@@ -60,7 +60,7 @@ reset role;
 select is(private.missing_scores(current_setting('test.c')::uuid, null), 0, 'contest complete');
 set local role authenticated;
 reset role;
-select is((select count(*)::int from public.score_audit where judge_id is null), 2, 'producer entries are audited (insert, update)');
+select is((select count(*)::int from public.score_audit where judge_id is null and contest_id = current_setting('test.c')::uuid), 2, 'producer entries are audited (insert, update)');
 set local role authenticated;
 
 -- ── deductions ──

@@ -335,8 +335,15 @@
             {
               "id": "P1.6.5",
               "title": "Rehearsal with a real past scoresheet",
-              "status": "todo",
-              "doc": "design/06-roadmap.md"
+              "status": "done",
+              "doc": "design/06-roadmap.md",
+              "note": "IMsBB 2024 recreated from its Google Form responses; same winner and totals, and it caught duplicate IMsL submissions in the spreadsheet"
+            },
+            {
+              "id": "P1.6.12",
+              "title": "Cross-panel categories: scored only by the other contest's judges, with their own high/low drop (IMsBB 2024)",
+              "status": "done",
+              "doc": "design/02-scoring-engine.md"
             }
           ]
         }

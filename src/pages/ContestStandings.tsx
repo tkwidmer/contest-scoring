@@ -62,7 +62,7 @@ export function ContestStandings() {
       penalties: (pn.data ?? []).map(p => ({ contestantId: p.contestant_id, categoryId: p.category_id, tier: p.tier })),
       categories: (cats.data ?? []).map(cat => ({
         id: cat.id, name: cat.name,
-        scoredBy: cat.scored_by as 'judges' | 'producer', guestAverage: cat.guest_average, deductions: cat.deductions as Deduction[],
+        scoredBy: cat.scored_by as 'judges' | 'producer' | 'cross_panel', guestAverage: cat.guest_average, deductions: cat.deductions as Deduction[],
         components: cat.components.map(k => ({ id: k.id, min: k.min_points, max: k.max_points, step: k.step })),
       })),
       tiebreakSteps: (ts.data ?? []).map(t => ({ categoryIds: t.category_ids, allJudges: t.all_judges })),
@@ -114,14 +114,15 @@ export function ContestStandings() {
   const progress = (judgeId: string, catId: string) => {
     const cat = names.categories.find(c => c.id === catId)!
     const guest = names.judges.find(j => j.id === judgeId)?.guest
-    const fills = judgeId === PRODUCER ? cat.scored_by === 'producer' : cat.scored_by === 'judges' && (!guest || cat.guest_average)
+    const fills = judgeId === PRODUCER ? cat.scored_by === 'producer'
+      : cat.scored_by === 'cross_panel' ? guest : cat.scored_by === 'judges' && (!guest || cat.guest_average)
     if (!fills) return { done: 0, total: 0 }
     const comps = input_.categories.find(c => c.id === catId)!.components
     const who = hasRounds && cat.round === 'final' ? active.filter(c => confirmed.includes(c.id)) : active
     const key = judgeId === PRODUCER ? 'null' : judgeId
     let done = 0, total = 0
     for (const c of who) {
-      if (!guest && recused.has(`${judgeId}|${c.id}`)) continue
+      if (recused.has(`${judgeId}|${c.id}`)) continue
       for (const k of comps) { total++; if (entered.has(`${key}|${c.id}|${k.id}`)) done++ }
     }
     return { done, total }
