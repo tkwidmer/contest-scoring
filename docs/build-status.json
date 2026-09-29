@@ -186,8 +186,9 @@
             {
               "id": "P1.2.4",
               "title": "Clone contest RPC + UI",
-              "status": "todo",
-              "doc": "design/01-domain-model.md"
+              "status": "done",
+              "doc": "design/01-domain-model.md",
+              "note": "clone_contest RPC; \"Scoresheet\" picker when adding a contest"
             }
           ]
         },
@@ -365,14 +366,16 @@
             {
               "id": "P3.3.1",
               "title": "Save as / apply template (private, public)",
-              "status": "todo",
-              "doc": "design/01-domain-model.md"
+              "status": "done",
+              "doc": "design/01-domain-model.md",
+              "note": "Save as template (org or any producer), use from picker, manage on org page. 18 pgTAP tests"
             },
             {
               "id": "P3.3.2",
               "title": "Curated templates (platform admin)",
-              "status": "todo",
-              "doc": "design/01-domain-model.md"
+              "status": "in_progress",
+              "doc": "design/01-domain-model.md",
+              "note": "Curated templates supported; IML and IMBB rubrics to load"
             }
           ]
         }

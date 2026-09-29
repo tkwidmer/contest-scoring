@@ -6,6 +6,7 @@ import { friendly } from '../lib/errors'
 import { button, card, h1, h2, input, label } from '../components/ui'
 
 type Contest = { id: string; name: string; status: string }
+type Source = { value: string; label: string } // '' = blank, 'c:<id>' = copy a contest, 't:<id>' = template
 type Event = { name: string; org_id: string; starts_on: string | null; venue: string | null; orgs: { name: string } | null }
 
 export function EventHome() {
@@ -14,6 +15,8 @@ export function EventHome() {
   const [event, setEvent] = useState<Event | null>(null)
   const [contests, setContests] = useState<Contest[]>([])
   const [name, setName] = useState('')
+  const [source, setSource] = useState('')
+  const [sources, setSources] = useState<{ group: string; options: Source[] }[]>([])
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -26,6 +29,19 @@ export function EventHome() {
     if (!ev.data) return setError("This event doesn't exist, or you're not a member of its organization.")
     setEvent(ev.data)
     setContests(cs.data ?? [])
+    const [past, tpl] = await Promise.all([
+      supabase.from('contests').select('id, name, events(name)').eq('org_id', ev.data.org_id).order('created_at', { ascending: false }),
+      supabase.from('templates').select('id, name, visibility, org_id').order('name'),
+    ])
+    const t = tpl.data ?? []
+    const orgId = ev.data.org_id
+    const opts = (list: typeof t) => list.map(x => ({ value: `t:${x.id}`, label: x.name }))
+    setSources([
+      { group: 'Official templates', options: opts(t.filter(x => x.visibility === 'curated')) },
+      { group: "Your organization's templates", options: opts(t.filter(x => x.org_id === orgId)) },
+      { group: 'Shared by other producers', options: opts(t.filter(x => x.visibility === 'public' && x.org_id !== orgId)) },
+      { group: 'Copy a contest', options: (past.data ?? []).map(c => ({ value: `c:${c.id}`, label: `${c.name} (${c.events?.name})` })) },
+    ].filter(g => g.options.length))
   }, [eventId])
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState runs after the awaits
@@ -33,11 +49,15 @@ export function EventHome() {
 
   async function createContest(e: FormEvent) {
     e.preventDefault()
-    // org_id is filled in from the event by the contests_set_org trigger; the generated types don't know that.
-    const row = { event_id: eventId, name } as TablesInsert<'contests'>
-    const { data, error } = await supabase.from('contests').insert(row).select('id').single()
+    const [kind, id = ''] = source.split(':')
+    const { data, error } = kind === 'c'
+      ? await supabase.rpc('clone_contest', { p_source: id, p_event: eventId, p_name: name })
+      : kind === 't'
+        ? await supabase.rpc('create_contest_from_template', { p_template: id, p_event: eventId, p_name: name })
+        // org_id is filled in from the event by the contests_set_org trigger; the generated types don't know that.
+        : await supabase.from('contests').insert({ event_id: eventId, name } as TablesInsert<'contests'>).select('id').single().then(r => ({ ...r, data: r.data?.id }))
     if (error) return setError(friendly(error))
-    navigate(`/c/${data.id}/setup`)
+    navigate(`/c/${data}/setup`)
   }
 
   if (!event) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
@@ -66,14 +86,26 @@ export function EventHome() {
             ))}
           </ul>
         )}
-        <form onSubmit={createContest} className="grid max-w-md gap-1">
-          <label htmlFor="contest-name" className={label}>New contest (title)</label>
-          <div className="flex gap-2">
+        <form onSubmit={createContest} className="grid max-w-2xl gap-2 sm:grid-cols-[2fr_2fr_auto] sm:items-end">
+          <div className="grid gap-1">
+            <label htmlFor="contest-name" className={label}>New contest (title)</label>
             <input id="contest-name" required maxLength={120} placeholder="Mr Great Lakes Leather" className={input}
               value={name} onChange={e => setName(e.target.value)} />
-            <button className={button}>Add</button>
           </div>
+          <div className="grid gap-1">
+            <label htmlFor="contest-source" className={label}>Scoresheet</label>
+            <select id="contest-source" className={input} value={source} onChange={e => setSource(e.target.value)}>
+              <option value="">Start blank</option>
+              {sources.map(g => (
+                <optgroup key={g.group} label={g.group}>
+                  {g.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+          <button className={button}>Add contest</button>
         </form>
+        <p className="text-xs text-muted">Templates and copies bring the scoresheet, scoring method, minimum and tiebreaks. Contestants and judges are added fresh.</p>
       </section>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </div>

@@ -23,6 +23,7 @@ export function ContestSetup() {
   const [contest, setContest] = useState<Contest | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [steps, setSteps] = useState<Step[]>([])
+  const [tpl, setTpl] = useState<{ name: string; description: string; visibility: string; saved: string }>({ name: '', description: '', visibility: 'private', saved: '' })
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -270,6 +271,31 @@ export function ContestSetup() {
               )}
             </div>
           </div>
+        </section>
+        {/* ── Template ── */}
+        <section className="grid gap-3">
+          <h2 className={h2}>Save as template</h2>
+          <p className="max-w-prose text-sm text-muted">
+            Reuse this scoresheet, scoring method, minimum and tiebreaks for future contests. Contestants, judges and scores are not included.
+          </p>
+          <form className="grid max-w-3xl gap-2 sm:grid-cols-[2fr_3fr_auto_auto] sm:items-end" onSubmit={async e => {
+            e.preventDefault()
+            const name = tpl.name.trim() || contest.name
+            const ok = await run(supabase.rpc('save_contest_as_template', { p_contest: contest.id, p_name: name, p_description: tpl.description, p_visibility: tpl.visibility }))
+            if (ok) setTpl({ ...tpl, name: '', description: '', saved: name })
+          }}>
+            <div className="grid gap-1"><label htmlFor="tpl-name" className={label}>Template name</label>
+              <input id="tpl-name" maxLength={120} placeholder={contest.name} className={input} value={tpl.name} onChange={e => setTpl({ ...tpl, name: e.target.value })} /></div>
+            <div className="grid gap-1"><label htmlFor="tpl-desc" className={label}>Description</label>
+              <input id="tpl-desc" maxLength={2000} className={input} value={tpl.description} onChange={e => setTpl({ ...tpl, description: e.target.value })} /></div>
+            <div className="grid gap-1"><label htmlFor="tpl-vis" className={label}>Who can use it</label>
+              <select id="tpl-vis" className={input} value={tpl.visibility} onChange={e => setTpl({ ...tpl, visibility: e.target.value })}>
+                <option value="private">My organization</option>
+                <option value="public">Any producer</option>
+              </select></div>
+            <button className={buttonQuiet}>Save template</button>
+          </form>
+          {tpl.saved && <p role="status" className="text-sm text-muted">Saved "{tpl.saved}". It's now available when adding a contest.</p>}
         </section>
       </fieldset>
     </div>

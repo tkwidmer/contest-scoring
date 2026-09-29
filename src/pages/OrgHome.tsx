@@ -6,6 +6,7 @@ import { button, card, h1, h2, input, label } from '../components/ui'
 
 type Member = { user_id: string; role: string; profiles: { display_name: string | null } | null }
 type Event = { id: string; name: string; starts_on: string | null; venue: string | null }
+type Template = { id: string; name: string; description: string | null; visibility: string }
 
 export function OrgHome() {
   const { orgId = '' } = useParams()
@@ -14,15 +15,17 @@ export function OrgHome() {
   const [isProducer, setIsProducer] = useState(false)
   const [members, setMembers] = useState<Member[]>([])
   const [events, setEvents] = useState<Event[]>([])
+  const [templates, setTemplates] = useState<Template[]>([])
   const [form, setForm] = useState({ name: '', starts_on: '', venue: '' })
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
-    const [org, mem, ev, me] = await Promise.all([
+    const [org, mem, ev, me, tp] = await Promise.all([
       supabase.from('orgs').select('name').eq('id', orgId).maybeSingle(),
       supabase.from('org_members').select('user_id, role, profiles(display_name)').eq('org_id', orgId),
       supabase.from('events').select('id, name, starts_on, venue').eq('org_id', orgId).order('starts_on', { ascending: false, nullsFirst: true }),
       supabase.auth.getUser(),
+      supabase.from('templates').select('id, name, description, visibility').eq('org_id', orgId).order('name'),
     ])
     const failed = org.error ?? mem.error ?? ev.error
     if (failed) return setError(friendly(failed))
@@ -30,6 +33,7 @@ export function OrgHome() {
     setName(org.data.name)
     setMembers(mem.data ?? [])
     setEvents(ev.data ?? [])
+    setTemplates(tp.data ?? [])
     setIsProducer((mem.data ?? []).some(m => m.user_id === me.data.user?.id && m.role === 'producer'))
   }, [orgId])
 
@@ -86,6 +90,29 @@ export function OrgHome() {
           </form>
         )}
       </section>
+
+      {templates.length > 0 && (
+        <section className="grid gap-3">
+          <h2 className={h2}>Templates</h2>
+          <ul className={`${card} divide-y divide-rule`}>
+            {templates.map(t => (
+              <li key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-2">
+                <span className="flex-1"><span className="font-medium">{t.name}</span>{t.description && <span className="text-sm text-muted"> · {t.description}</span>}</span>
+                {isProducer ? (
+                  <select aria-label={`Who can use ${t.name}`} className={`${input} w-auto py-1 text-sm`} value={t.visibility}
+                    onChange={async e => { const { error } = await supabase.from('templates').update({ visibility: e.target.value }).eq('id', t.id); if (error) setError(friendly(error)); load() }}>
+                    <option value="private">My organization</option>
+                    <option value="public">Any producer</option>
+                  </select>
+                ) : <span className="font-mono text-xs text-muted">{t.visibility === 'public' ? 'any producer' : 'this organization'}</span>}
+                {isProducer && <button className="rounded border border-rule px-2 py-1 font-mono text-xs hover:border-accent" aria-label={`Delete ${t.name}`}
+                  onClick={async () => { if (!window.confirm(`Delete template "${t.name}"? Contests made from it are not affected.`)) return
+                    const { error } = await supabase.from('templates').delete().eq('id', t.id); if (error) setError(friendly(error)); load() }}>✕</button>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="grid gap-3">
         <h2 className={h2}>Members</h2>

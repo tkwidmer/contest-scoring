@@ -312,6 +312,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"templates": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"description": string | null,"id": string,"name": string,"org_id": string | null,"rubric": NonNullable<Json>,"visibility": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"description"?: string | null,"id"?: string,"name": string,"org_id"?: string | null,"rubric": NonNullable<Json>,"visibility"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"description"?: string | null,"id"?: string,"name"?: string,"org_id"?: string | null,"rubric"?: NonNullable<Json>,"visibility"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "templates_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "templates_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: false
+      referencedRelation: "orgs"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"tiebreak_steps": {
                   Row: {
                     "category_ids": (string)[],"contest_id": string,"step_no": number
@@ -337,11 +362,20 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "create_org":
+            "clone_contest":
+{ Args: { "p_event": string,"p_name": string,"p_source": string }; Returns: string
+                           },
+"create_contest_from_template":
+{ Args: { "p_event": string,"p_name": string,"p_template": string }; Returns: string
+                           },
+"create_org":
 { Args: { "p_name": string }; Returns: string
                            },
 "finalize_contest":
 { Args: { "p_contest": string,"p_result": Json }; Returns: undefined
+                           },
+"save_contest_as_template":
+{ Args: { "p_contest": string,"p_description": string,"p_name": string,"p_visibility": string }; Returns: string
                            },
 "set_contest_status":
 { Args: { "p_contest": string,"p_status": string }; Returns: undefined

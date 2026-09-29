@@ -67,7 +67,7 @@ erDiagram
 ### Templates
 | Table | Columns | Notes |
 |---|---|---|
-| `templates` | `org_id null`, `name`, `description`, `visibility` ∈ `private`,`public`,`curated`, `rubric jsonb`, `created_by` | `rubric` = `{aggregation, threshold_pct, categories:[{name, drop_rank, components:[{name,min,max,step,description}]}], tiebreak_steps:[[categoryIndex…]]}`. `curated` requires a platform admin and `org_id` null. |
+| `templates` | `org_id null`, `name`, `description`, `visibility` ∈ `private`,`public`,`curated`, `rubric jsonb`, `created_by` | `rubric` = `{aggregation, threshold_pct, anonymize_comments, categories:[{name, drop_rank, components:[{name, description, min_points, max_points, step}]}], tiebreak_steps:[[categoryIndex…]]}`. Created only by `save_contest_as_template`; clients can edit name, description and visibility. `curated` requires a platform admin and `org_id` null. |
 
 ## Key flows on the model
 - **Clone a contest.** RPC `clone_contest(contest_id, target_event_id)` copies the contest settings, categories, components and tiebreak steps. It doesn't copy contestants, judges or scores. **Apply template** does the same from `rubric` jsonb, and **Save as template** does the reverse. All three produce copies, never live links.
