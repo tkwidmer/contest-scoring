@@ -327,10 +327,10 @@
             },
             {
               "id": "P1.6.11",
-              "title": "Official templates: SD x2, WSLO x2, MML, Maryland, NW x2, SF Bootblack",
+              "title": "Official templates: San Diego Leather & Leatherbear, San Diego Bootblack, SF Bootblack",
               "status": "done",
               "doc": "design/01-domain-model.md",
-              "note": "13 official templates in total; IMs/IPOL skipped (usage restriction)"
+              "note": "7 official templates in total; the other contests were reference examples only"
             },
             {
               "id": "P1.6.5",
