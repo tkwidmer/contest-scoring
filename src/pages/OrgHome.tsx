@@ -75,7 +75,7 @@ export function OrgHome() {
           <form onSubmit={createEvent} className="grid max-w-2xl gap-3 sm:grid-cols-[2fr_1fr_1.5fr_auto] sm:items-end">
             <div className="grid gap-1">
               <label htmlFor="ev-name" className={label}>Event name</label>
-              <input id="ev-name" required maxLength={120} placeholder="Great Lakes Leather Weekend 2027" className={input}
+              <input id="ev-name" required maxLength={120} placeholder="IML Weekend 2027" className={input}
                 value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="grid gap-1">

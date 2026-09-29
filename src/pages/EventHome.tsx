@@ -89,7 +89,7 @@ export function EventHome() {
         <form onSubmit={createContest} className="grid max-w-2xl gap-2 sm:grid-cols-[2fr_2fr_auto] sm:items-end">
           <div className="grid gap-1">
             <label htmlFor="contest-name" className={label}>New contest (title)</label>
-            <input id="contest-name" required maxLength={120} placeholder="Mr Great Lakes Leather" className={input}
+            <input id="contest-name" required maxLength={120} placeholder="International Mr. Leather" className={input}
               value={name} onChange={e => setName(e.target.value)} />
           </div>
           <div className="grid gap-1">

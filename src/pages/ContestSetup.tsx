@@ -306,11 +306,11 @@ export function ContestSetup() {
             <div className="grid content-start gap-2">
               <h3 className="font-semibold">Drop order</h3>
               <p className="text-xs text-muted">First category listed is dropped first.</p>
-              <ol className={`${card} divide-y divide-rule`}>
+              <ol className={`${card} min-w-0 divide-y divide-rule`}>
                 {dropOrder.map((c, i) => (
                   <li key={c.id} className="flex items-center gap-2 px-3 py-2">
                     <span className="w-5 font-mono text-xs text-muted">{i + 1}</span>
-                    <span className="flex-1 truncate">{c.name}</span>
+                    <span className="min-w-0 flex-1 break-words">{c.name}</span>
                     {!locked && <>
                       <button type="button" className={iconButton} aria-label={`Drop ${c.name} earlier`} disabled={i === 0} onClick={() => reorder(dropOrder, i, i - 1, 'drop_rank')}>↑</button>
                       <button type="button" className={iconButton} aria-label={`Drop ${c.name} later`} disabled={i === dropOrder.length - 1} onClick={() => reorder(dropOrder, i, i + 1, 'drop_rank')}>↓</button>

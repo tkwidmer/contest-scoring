@@ -46,7 +46,7 @@ export function Home() {
       <form onSubmit={createOrg} className="grid max-w-md gap-2">
         <label htmlFor="org-name" className="text-sm text-muted">New organization name</label>
         <div className="flex gap-2">
-          <input id="org-name" required maxLength={120} placeholder="Great Lakes Leather Productions" className="min-w-0 flex-1 rounded border border-rule bg-surface px-3 py-2 focus:border-accent focus:outline-none" value={name} onChange={e => setName(e.target.value)} />
+          <input id="org-name" required maxLength={120} placeholder="International Mr. Leather, Inc." className="min-w-0 flex-1 rounded border border-rule bg-surface px-3 py-2 focus:border-accent focus:outline-none" value={name} onChange={e => setName(e.target.value)} />
           <button className="rounded bg-accent px-4 py-2 font-medium text-on-accent">Create</button>
         </div>
       </form>
