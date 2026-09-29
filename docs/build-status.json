@@ -1,5 +1,5 @@
 {
-  "project": "Contest Scoring",
+  "project": "Tallymaster.top",
   "updated": "2026-09-29",
   "statuses": [
     "todo",
@@ -344,6 +344,13 @@
               "title": "Cross-panel categories: scored only by the other contest's judges, with their own high/low drop (IMsBB 2024)",
               "status": "done",
               "doc": "design/02-scoring-engine.md"
+            },
+            {
+              "id": "P1.6.13",
+              "title": "Tallymaster.top branding and public landing page",
+              "status": "done",
+              "doc": "design/04-ux-flows.md",
+              "note": "Custom domain tallymaster.top not configured yet"
             }
           ]
         }

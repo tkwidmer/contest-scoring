@@ -1,6 +1,6 @@
-# Contest Scoring
+# Tallymaster.top
 
-Personal project: scoring platform for leather/LGBT title contests. The design lives in `docs/design/` (start with `00-overview.md`). Build status is tracked in `docs/build-status.json`, rendered by `docs/build-dashboard.html`. **Update the task statuses in build-status.json as work lands.**
+Personal project (repo and Supabase/Vercel projects are still named `contest-scoring`): scoring platform for leather/LGBT title contests. The design lives in `docs/design/` (start with `00-overview.md`). Build status is tracked in `docs/build-status.json`, rendered by `docs/build-dashboard.html`. **Update the task statuses in build-status.json as work lands.**
 
 - **ARCC governance does not apply to this project.** It is work-only. Don't query ARCC or report on an ARCC setup gap here. Apply standard security practices instead.
 

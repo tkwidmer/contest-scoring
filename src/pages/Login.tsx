@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
+import { Brand } from '../components/Brand'
 import { supabase } from '../lib/supabase'
 import { useSession } from '../context/auth'
 
@@ -36,7 +37,7 @@ export function Login() {
 
   return (
     <main className="mx-auto grid min-h-dvh max-w-sm content-center gap-6 px-4">
-      <h1 className="font-display text-4xl font-extrabold uppercase">Contest Scoring</h1>
+      <h1><Link to="/"><Brand className="text-4xl" /></Link></h1>
       {!sent ? (
         <form onSubmit={sendCode} className="grid gap-3">
           <label htmlFor="email" className="text-sm text-muted">Email</label>
