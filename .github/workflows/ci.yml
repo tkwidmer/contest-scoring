@@ -21,8 +21,8 @@ jobs:
         env:
           VITE_SUPABASE_URL: http://127.0.0.1:54321
           VITE_SUPABASE_ANON_KEY: ci-placeholder
-      - name: No service-role key in bundle
-        run: "! grep -rE 'service_role|sb_secret_' dist/"
+      - name: No secret key or JWT in bundle (browser uses sb_publishable_ keys)
+        run: "! grep -rE 'sb_secret_[A-Za-z0-9_-]+|eyJhbGci' dist/"
 
   db:
     runs-on: ubuntu-latest
