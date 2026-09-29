@@ -45,7 +45,7 @@ export function Login() {
         </form>
       ) : (
         <form onSubmit={verify} className="grid gap-3">
-          <p className="text-sm text-muted">We sent a code and a sign-in link to <strong className="text-fg">{email}</strong>. Use either one.</p>
+          <p className="text-sm text-muted">Check <strong className="text-fg">{email}</strong> and click the sign-in link. If the email shows a 6-digit code, you can enter it here instead.</p>
           <label htmlFor="code" className="text-sm text-muted">6-digit code</label>
           <input id="code" inputMode="numeric" autoComplete="one-time-code" required className={`${input} font-mono tracking-widest`} value={code} onChange={e => setCode(e.target.value)} />
           <button className={button} disabled={busy}>{busy ? 'Checking…' : 'Sign in'}</button>
