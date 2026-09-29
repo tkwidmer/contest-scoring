@@ -42,10 +42,10 @@ erDiagram
 | Table | Columns | Notes |
 |---|---|---|
 | `events` | `org_id`, `name`, `starts_on date`, `venue text null` | |
-| `contests` | `event_id`, `name`, `status` ∈ `draft`,`scoring`,`finalized`,`published`; `aggregation` ∈ `sum`,`drop_high_low`; `threshold_pct numeric(5,2) null` (null = no threshold); `anonymize_comments bool default true`; `manual_winner_contestant_id null`; `manual_winner_reason text null` | Denormalized `org_id` column (set by trigger) keeps RLS predicates cheap. |
-| `categories` | `contest_id`, `name`, `sort int`, `drop_rank int null` | `drop_rank` 1 = dropped first in tiebreaks. |
-| `components` | `category_id`, `name`, `min_points numeric(6,2) default 0`, `max_points numeric(6,2)`, `step numeric(4,2) default 1`, `sort int`, `description text null` | CHECK `max_points > min_points`, `step > 0`. |
-| `tiebreak_steps` | `contest_id`, `step_no int`, `category_ids uuid[]` | unique(contest_id, step_no). Auto-generated from `drop_rank`, then editable. |
+| `contests` | `event_id`, `org_id` (copied from the event by trigger, keeps RLS predicates cheap), `status` ∈ `draft`,`scoring`,`finalized`,`published`; `aggregation` ∈ `sum`,`drop_high_low`; `threshold_pct numeric(5,2) null` (null = no threshold); `anonymize_comments bool default true`; `manual_winner_reason text null` | `status` has no client write privilege; it changes only through RPCs. `aggregation` and `threshold_pct` lock with the rubric. `manual_winner_contestant_id` arrives with `contestants`. |
+| `categories` | `contest_id`, `name`, `sort int`, `drop_rank int null` | `drop_rank` 1 = dropped first in tiebreaks. Not unique; the UI rewrites all ranks together. Deleting a category prunes it from `tiebreak_steps`. |
+| `components` | `category_id`, `name`, `min_points numeric(6,2) default 0`, `max_points numeric(6,2)`, `step numeric(4,2) default 1`, `sort int`, `description text null` | CHECK `min_points >= 0`, `max_points > min_points`, `step > 0`, and the range is a whole number of steps. |
+| `tiebreak_steps` | `contest_id`, `step_no int`, `category_ids uuid[]` | pk(contest_id, step_no). Auto-generated from `drop_rank`, then editable. A trigger rejects categories from other contests. Locks with the rubric. |
 
 ### People
 | Table | Columns | Notes |

@@ -23,7 +23,89 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "org_members": {
+            "categories": {
+                  Row: {
+                    "contest_id": string,"created_at": string,"drop_rank": number | null,"id": string,"name": string,"sort": number
+                  }
+                  Insert: {
+                    "contest_id": string,"created_at"?: string,"drop_rank"?: number | null,"id"?: string,"name": string,"sort"?: number
+                  }
+                  Update: {
+                    "contest_id"?: string,"created_at"?: string,"drop_rank"?: number | null,"id"?: string,"name"?: string,"sort"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "categories_contest_id_fkey"
+      columns: ["contest_id"]
+isOneToOne: false
+      referencedRelation: "contests"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"components": {
+                  Row: {
+                    "category_id": string,"created_at": string,"description": string | null,"id": string,"max_points": number,"min_points": number,"name": string,"sort": number,"step": number
+                  }
+                  Insert: {
+                    "category_id": string,"created_at"?: string,"description"?: string | null,"id"?: string,"max_points": number,"min_points"?: number,"name": string,"sort"?: number,"step"?: number
+                  }
+                  Update: {
+                    "category_id"?: string,"created_at"?: string,"description"?: string | null,"id"?: string,"max_points"?: number,"min_points"?: number,"name"?: string,"sort"?: number,"step"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "components_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"contests": {
+                  Row: {
+                    "aggregation": string,"anonymize_comments": boolean,"created_at": string,"event_id": string,"id": string,"manual_winner_reason": string | null,"name": string,"org_id": string,"status": string,"threshold_pct": number | null
+                  }
+                  Insert: {
+                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id": string,"id"?: string,"manual_winner_reason"?: string | null,"name": string,"org_id": string,"status"?: string,"threshold_pct"?: number | null
+                  }
+                  Update: {
+                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id"?: string,"id"?: string,"manual_winner_reason"?: string | null,"name"?: string,"org_id"?: string,"status"?: string,"threshold_pct"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "contests_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "contests_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: false
+      referencedRelation: "orgs"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"events": {
+                  Row: {
+                    "created_at": string,"id": string,"name": string,"org_id": string,"starts_on": string | null,"venue": string | null
+                  }
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"name": string,"org_id": string,"starts_on"?: string | null,"venue"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"name"?: string,"org_id"?: string,"starts_on"?: string | null,"venue"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "events_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: false
+      referencedRelation: "orgs"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"org_members": {
                   Row: {
                     "created_at": string,"org_id": string,"role": string,"user_id": string
                   }
@@ -73,6 +155,25 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"tiebreak_steps": {
+                  Row: {
+                    "category_ids": (string)[],"contest_id": string,"step_no": number
+                  }
+                  Insert: {
+                    "category_ids": (string)[],"contest_id": string,"step_no": number
+                  }
+                  Update: {
+                    "category_ids"?: (string)[],"contest_id"?: string,"step_no"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tiebreak_steps_contest_id_fkey"
+      columns: ["contest_id"]
+isOneToOne: false
+      referencedRelation: "contests"
+      referencedColumns: ["id"]
+    }
                   ]
                 }
           }

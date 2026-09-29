@@ -165,8 +165,9 @@
             {
               "id": "P1.2.1",
               "title": "events/contests/categories/components schema + RLS",
-              "status": "todo",
-              "doc": "design/01-domain-model.md"
+              "status": "done",
+              "doc": "design/01-domain-model.md",
+              "note": "24 pgTAP tests; applied to hosted. Follow-up: split \"for all\" write policies (advisor: multiple permissive SELECT policies)"
             },
             {
               "id": "P1.2.2",
