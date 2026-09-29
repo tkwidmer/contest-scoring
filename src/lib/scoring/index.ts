@@ -9,17 +9,37 @@ export type Aggregation = 'sum' | 'drop_high_low' | 'drop_high_low_total'
 // Categories not in the round being computed contribute nothing, so one step list serves prelims and finals.
 export type TiebreakStep = { categoryIds: string[]; allJudges: boolean }
 
+// A tally-master deduction a category allows, e.g. overtime. points come off the category on the scale the
+// contest reports (per-judge average or sum); percent comes off the category's aggregated score.
+export type Deduction = { label: string; points?: number; percent?: number }
+
+export type Category = {
+  id: string
+  name: string
+  components: { id: string; min: number; max: number; step: number }[]
+  scoredBy?: 'judges' | 'producer' // producer: one score per contestant, e.g. a community vote
+  guestAverage?: boolean // cross-panel (guest) judges' average counts as one more judge here
+  deductions?: Deduction[]
+}
+
 export type ScoringInput = {
   aggregation: Aggregation
   thresholdPct: number | null
-  categories: { id: string; name: string; components: { id: string; min: number; max: number; step: number }[] }[]
+  thresholdSingleOnly?: boolean // the minimum applies only when there is a single contestant
+  reportAs?: 'total' | 'average' // average: each category is the average of its counted judges
+  categories: Category[]
   tiebreakSteps: TiebreakStep[]
-  judges: { id: string }[]
+  judges: { id: string; guest?: boolean }[]
   contestants: { id: string; withdrawn: boolean }[]
   recusals: { judgeId: string; contestantId: string }[]
-  scores: { judgeId: string; contestantId: string; componentId: string; value: number }[]
+  scores: { judgeId: string | null; contestantId: string; componentId: string; value: number }[] // null judge: producer-scored
+  penalties?: { contestantId: string; categoryId: string; tier: number }[]
   manualWinnerId?: string | null
 }
+
+// Breakdown column for the cross-panel average and for producer-entered scores.
+export const CROSS_PANEL = 'cross-panel'
+export const PRODUCER = 'producer'
 
 export type Standing = {
   contestantId: string
@@ -28,8 +48,10 @@ export type Standing = {
   pct: number
   categoryTotals: Record<string, number>
   completeness: number // 0..1 of expected score cells (recused cells count once backfilled)
-  // Per category, one entry per judge (input order). subtotal is null until all of that judge's components are in.
+  // Per category, one entry per judge (input order, then the cross-panel average), or a single PRODUCER entry.
+  // subtotal is null until all of that judge's components are in.
   breakdown: Record<string, { judgeId: string; subtotal: number | null; dropped: boolean; backfilled: boolean }[]>
+  deductions: { categoryId: string; label: string; amount: number }[] // on the reported scale
   tiebreakPath?: { step: number; value: number }[]
 }
 
@@ -54,6 +76,7 @@ type Row = {
   catH: Record<string, number>
   fullCatH: Record<string, number> // every judge counted
   breakdown: Standing['breakdown']
+  deductions: { categoryId: string; label: string; amountU: number }[]
   completeness: number
   complete: boolean
   path: { step: number; value: number }[]
@@ -64,10 +87,14 @@ const toH = (n: number) => Math.round(n * 100)
 const fromH = (n: number) => n / 100
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
 
+const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a)
+const lcm = (xs: number[]) => xs.reduce((a, b) => (a * b) / gcd(a, b), 1)
+
 export function computeResults(input: ScoringInput): Result {
   const warnings: string[] = []
-  const judges = input.judges.map(j => j.id)
-  const J = judges.length
+  const panel = input.judges.filter(j => !j.guest).map(j => j.id)
+  const guests = input.judges.filter(j => j.guest).map(j => j.id)
+  const J = panel.length
 
   let aggregation = input.aggregation
   if (aggregation !== 'sum' && J < 5) {
@@ -75,26 +102,37 @@ export function computeResults(input: ScoringInput): Result {
     aggregation = 'sum'
   }
 
-  const components = input.categories.flatMap(c => c.components)
-  const maxH = new Map(components.map(c => [c.id, toH(c.max)]))
-  const countedJudges = aggregation === 'sum' ? J : J - 2
-  const maxPossibleH = countedJudges * sum(components.map(c => toH(c.max)))
+  const judgeCats = input.categories.filter(c => c.scoredBy !== 'producer')
+  const producerCats = input.categories.filter(c => c.scoredBy === 'producer')
+  const components = judgeCats.flatMap(c => c.components)
+  const maxH = new Map(input.categories.flatMap(c => c.components).map(c => [c.id, toH(c.max)]))
+  const catMaxH = (c: Category) => sum(c.components.map(k => maxH.get(k.id)!))
+  const hasVirtual = (c: Category) => !!c.guestAverage && guests.length > 0
+  const slots = (c: Category) => J + (hasVirtual(c) ? 1 : 0)
+  const counted = (c: Category) => (aggregation === 'sum' ? slots(c) : slots(c) - 2)
 
-  const score = new Map(input.scores.map(s => [`${s.judgeId}|${s.contestantId}|${s.componentId}`, toH(s.value)]))
+  // Internal unit: hundredths x U. Reporting averages divides each category by its judge count, so everything is
+  // multiplied by the lcm of those counts to stay in whole numbers (ties remain exact).
+  const average = input.reportAs === 'average'
+  const U = average ? lcm(judgeCats.flatMap(c => [counted(c), slots(c)]).filter(n => n > 0)) : 1
+  const per = (n: number) => (n > 0 ? U / (average ? n : 1) : 0) // multiplier for a category summed over n judges
+  const toU = (h: number) => h * U // producer scores and point deductions sit on the reported scale
+  const fromU = (x: number) => x / (100 * U)
+  const maxPossibleU = sum(judgeCats.map(c => counted(c) * catMaxH(c) * per(counted(c)))) + sum(producerCats.map(c => toU(catMaxH(c))))
+
+  const score = new Map(input.scores.map(s => [`${s.judgeId ?? PRODUCER}|${s.contestantId}|${s.componentId}`, toH(s.value)]))
   const recused = new Set(input.recusals.map(r => `${r.judgeId}|${r.contestantId}`))
+  const mean = (xs: number[]) => Math.round(sum(xs) / xs.length) // ponytail: half-up only for non-negative scores
 
   const rows: Row[] = input.contestants.filter(c => !c.withdrawn).map(({ id: cid }) => {
-    // values[judge][component], with recusals backfilled by the others' mean (A1, A2)
-    const values = judges.map(j => {
+    // values[panel judge][component], recusals backfilled by the other panel judges' mean (A1, A2)
+    const values = panel.map(j => {
       const byComp = new Map<string, number>()
       for (const comp of components) {
         if (recused.has(`${j}|${cid}`)) {
-          const others = judges
-            .filter(o => !recused.has(`${o}|${cid}`))
-            .map(o => score.get(`${o}|${cid}|${comp.id}`))
-            .filter((v): v is number => v !== undefined)
-          // ponytail: Math.round is half-up only for non-negative scores; fine while min >= 0
-          if (others.length) byComp.set(comp.id, Math.round(sum(others) / others.length))
+          const others = panel.filter(o => !recused.has(`${o}|${cid}`))
+            .map(o => score.get(`${o}|${cid}|${comp.id}`)).filter((v): v is number => v !== undefined)
+          if (others.length) byComp.set(comp.id, mean(others))
         } else {
           const v = score.get(`${j}|${cid}|${comp.id}`)
           if (v !== undefined) byComp.set(comp.id, v)
@@ -102,9 +140,20 @@ export function computeResults(input: ScoringInput): Result {
       }
       return byComp
     })
+    // The cross-panel average: one extra "judge" in guest categories, present once every guest has scored.
+    const virtual = new Map<string, number>()
+    let guestFilled = 0, guestExpected = 0
+    for (const c of judgeCats.filter(hasVirtual)) for (const comp of c.components) {
+      const vs = guests.map(g => score.get(`${g}|${cid}|${comp.id}`)).filter((v): v is number => v !== undefined)
+      guestFilled += vs.length
+      guestExpected += guests.length
+      if (vs.length === guests.length) virtual.set(comp.id, mean(vs))
+    }
+    const producerComps = producerCats.flatMap(c => c.components)
+    const producerFilled = producerComps.filter(k => score.has(`${PRODUCER}|${cid}|${k.id}`)).length
 
-    const expected = J * components.length
-    const filled = sum(values.map(v => v.size))
+    const expected = J * components.length + guestExpected + producerComps.length
+    const filled = sum(values.map(v => v.size)) + guestFilled + producerFilled
     const complete = expected > 0 && filled === expected
 
     // Drop exactly one high and one low (A1); among equal values the first judge in order is the one marked.
@@ -114,39 +163,72 @@ export function computeResults(input: ScoringInput): Result {
     }
     const judgeTotals = values.map(v => sum([...v.values()]))
     const droppedByTotal = complete && aggregation === 'drop_high_low_total' ? highLow(judgeTotals) : new Set<number>()
+    const myPenalties = (input.penalties ?? []).filter(p => p.contestantId === cid)
 
     const catH: Record<string, number> = {}
     const fullCatH: Record<string, number> = {}
     const breakdown: Standing['breakdown'] = {}
-    let denomH = 0 // points possible on what's been entered, for comparing incomplete contestants
-    for (const cat of input.categories) {
+    const deductions: Row['deductions'] = []
+    let denomU = 0 // points possible on what's been entered, for comparing incomplete contestants
+
+    // Deductions come off after aggregation; the every-judge figure used by tiebreaks gets the same deductions.
+    const deduct = (c: Category, v: number, full: number) => {
+      for (const p of myPenalties.filter(p => p.categoryId === c.id)) {
+        const d = c.deductions?.[p.tier]
+        if (!d) continue
+        const off = (x: number) => (d.percent != null ? Math.round((x * d.percent) / 100) : toU(toH(d.points ?? 0)))
+        const amount = Math.min(v, off(v))
+        deductions.push({ categoryId: c.id, label: d.label, amountU: amount })
+        v -= amount
+        full -= Math.min(full, off(full))
+      }
+      catH[c.id] = v
+      fullCatH[c.id] = full
+    }
+
+    for (const cat of judgeCats) {
       const subtotals = values.map(v => sum(cat.components.map(c => v.get(c.id) ?? 0)))
+      const has = values.map(v => cat.components.every(c => v.has(c.id)))
+      if (hasVirtual(cat)) {
+        subtotals.push(sum(cat.components.map(c => virtual.get(c.id) ?? 0)))
+        has.push(cat.components.every(c => virtual.has(c.id)))
+      }
       // A category drops its high and low as soon as every judge's scores for it are in.
-      const catComplete = J > 0 && values.every(v => cat.components.every(c => v.has(c.id)))
+      const catComplete = subtotals.length > 0 && has.every(Boolean)
       const dropped = aggregation === 'drop_high_low' && catComplete ? highLow(subtotals) : droppedByTotal
-      const catMaxH = sum(cat.components.map(c => maxH.get(c.id)!))
-      denomH += dropped.size ? (J - dropped.size) * catMaxH : sum(values.flatMap(v => cat.components.filter(c => v.has(c.id)).map(c => maxH.get(c.id)!)))
-      catH[cat.id] = sum(subtotals.filter((_, i) => !dropped.has(i)))
-      fullCatH[cat.id] = sum(subtotals)
-      breakdown[cat.id] = judges.map((j, i) => ({
-        judgeId: j,
-        subtotal: cat.components.every(c => values[i]!.has(c.id)) ? fromH(subtotals[i]!) : null,
+      const kept = subtotals.length - dropped.size
+      deduct(cat, sum(subtotals.filter((_, i) => !dropped.has(i))) * per(kept), sum(subtotals) * per(subtotals.length))
+      const enteredMaxH = sum(values.flatMap(v => cat.components.filter(c => v.has(c.id)).map(c => maxH.get(c.id)!)))
+        + (hasVirtual(cat) ? sum(cat.components.filter(c => virtual.has(c.id)).map(c => maxH.get(c.id)!)) : 0)
+      denomU += dropped.size ? kept * catMaxH(cat) * per(kept) : enteredMaxH * per(subtotals.length)
+      breakdown[cat.id] = subtotals.map((st, i) => ({
+        judgeId: i < J ? panel[i]! : CROSS_PANEL,
+        subtotal: has[i] ? fromH(st) : null,
         dropped: dropped.has(i),
-        backfilled: recused.has(`${j}|${cid}`),
+        backfilled: i < J && recused.has(`${panel[i]}|${cid}`),
       }))
     }
-    const totalH = sum(Object.values(catH))
 
+    for (const cat of producerCats) {
+      const has = cat.components.every(k => score.has(`${PRODUCER}|${cid}|${k.id}`))
+      const vH = sum(cat.components.map(k => score.get(`${PRODUCER}|${cid}|${k.id}`) ?? 0))
+      deduct(cat, toU(vH), toU(vH))
+      denomU += toU(sum(cat.components.filter(k => score.has(`${PRODUCER}|${cid}|${k.id}`)).map(k => maxH.get(k.id)!)))
+      breakdown[cat.id] = [{ judgeId: PRODUCER, subtotal: has ? fromH(vH) : null, dropped: false, backfilled: false }]
+    }
+
+    const totalH = sum(Object.values(catH))
     // Incomplete contestants are compared by % of the points they could have earned so far.
-    if (complete) denomH = maxPossibleH
+    if (complete) denomU = maxPossibleU
 
     return {
       id: cid,
       totalH,
-      pct: denomH ? totalH / denomH : 0,
+      pct: denomU ? totalH / denomU : 0,
       catH,
       fullCatH,
       breakdown,
+      deductions,
       completeness: expected ? filled / expected : 0,
       complete,
       path: [],
@@ -167,7 +249,7 @@ export function computeResults(input: ScoringInput): Result {
     // Tiebreaks need real category totals, so they only apply when everyone in the tied group is fully scored.
     if (group.length < 2 || group.some(r => !r.complete) || !step) return [group]
     const value = (r: Row) => sum(step.categoryIds.map(catId => (step.allJudges ? r.fullCatH : r.catH)[catId] ?? 0))
-    for (const r of group) r.path.push({ step: stepIdx + 1, value: fromH(value(r)) })
+    for (const r of group) r.path.push({ step: stepIdx + 1, value: fromU(value(r)) })
     return split(group, value).flatMap(g => resolve(g, stepIdx + 1))
   }
 
@@ -183,7 +265,7 @@ export function computeResults(input: ScoringInput): Result {
   let winner: Winner
   if (!allComplete) {
     winner = { kind: 'incomplete', projectedId: top[0]?.id ?? null }
-  } else if (thresholdPct != null && top[0]!.totalH * 100 < maxPossibleH * thresholdPct) {
+  } else if (thresholdPct != null && (!input.thresholdSingleOnly || rows.length === 1) && top[0]!.totalH * 100 < maxPossibleU * thresholdPct) {
     winner = { kind: 'no_title', reason: 'below_threshold' }
   } else if (top.length > 1) {
     const manual = top.find(r => r.id === input.manualWinnerId)
@@ -195,16 +277,17 @@ export function computeResults(input: ScoringInput): Result {
   }
 
   return {
-    maxPossible: fromH(maxPossibleH),
-    thresholdPoints: thresholdPct == null ? null : fromH(maxPossibleH) * thresholdPct / 100,
+    maxPossible: fromU(maxPossibleU),
+    thresholdPoints: thresholdPct == null || (input.thresholdSingleOnly && rows.length !== 1) ? null : fromU(maxPossibleU) * thresholdPct / 100,
     standings: groups.flat().map(r => ({
       contestantId: r.id,
       rank: r.rank,
-      total: fromH(r.totalH),
+      total: fromU(r.totalH),
       pct: r.pct,
-      categoryTotals: Object.fromEntries(Object.entries(r.catH).map(([k, v]) => [k, fromH(v)])),
+      categoryTotals: Object.fromEntries(Object.entries(r.catH).map(([k, v]) => [k, fromU(v)])),
       completeness: r.completeness,
       breakdown: r.breakdown,
+      deductions: r.deductions.map(d => ({ categoryId: d.categoryId, label: d.label, amount: fromU(d.amountU) })),
       ...(r.path.length ? { tiebreakPath: r.path } : {}),
     })),
     winner,

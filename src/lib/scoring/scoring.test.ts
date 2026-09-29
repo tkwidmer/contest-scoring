@@ -1,9 +1,15 @@
 // Edge-case fixtures from docs/design/02-scoring-engine.md, numbered to match that list.
 import { describe, expect, it } from 'vitest'
-import { computeContest, computeResults, generateTiebreakSteps, type Aggregation, type Rounds, type ScoringInput, type TiebreakStep } from './index'
+import { CROSS_PANEL, PRODUCER, computeContest, computeResults, generateTiebreakSteps, type Aggregation, type Category, type Rounds, type ScoringInput, type TiebreakStep } from './index'
 
 type Spec = {
   judges: number
+  guests?: number // cross-panel judges G1..Gn; their values follow the panel's in each score array
+  reportAs?: 'total' | 'average'
+  thresholdSingleOnly?: boolean
+  catOptions?: Record<string, Pick<Category, 'scoredBy' | 'guestAverage' | 'deductions'>>
+  producer?: Record<string, Record<string, number>> // contestant -> component -> value, for producer-scored categories
+  penalties?: [contestant: string, category: string, tier: number][]
   aggregation?: Aggregation
   thresholdPct?: number | null
   // category -> component -> max (min 0, step 0.5)
@@ -17,24 +23,33 @@ type Spec = {
 }
 
 function build(s: Spec): ScoringInput {
-  const judges = Array.from({ length: s.judges }, (_, i) => ({ id: `J${i + 1}` }))
+  const judges = [
+    ...Array.from({ length: s.judges }, (_, i) => ({ id: `J${i + 1}` })),
+    ...Array.from({ length: s.guests ?? 0 }, (_, i) => ({ id: `G${i + 1}`, guest: true })),
+  ]
+  const judgeAt = (i: number) => judges[i]!.id
   return {
     aggregation: s.aggregation ?? 'sum',
     thresholdPct: s.thresholdPct ?? null,
+    thresholdSingleOnly: s.thresholdSingleOnly,
+    reportAs: s.reportAs,
     categories: Object.entries(s.categories).map(([cat, comps]) => ({
       id: cat,
       name: cat,
       components: Object.entries(comps).map(([id, max]) => ({ id, min: 0, max, step: 0.5 })),
+      ...s.catOptions?.[cat],
     })),
     tiebreakSteps: (s.steps ?? []).map(x => (Array.isArray(x) ? { categoryIds: x, allJudges: false } : x)),
     judges,
     contestants: Object.keys(s.scores).map(id => ({ id, withdrawn: s.withdrawn?.includes(id) ?? false })),
     recusals: (s.recusals ?? []).map(([n, c]) => ({ judgeId: `J${n}`, contestantId: c })),
-    scores: Object.entries(s.scores).flatMap(([cid, comps]) =>
+    scores: Object.entries(s.scores).flatMap(([cid, comps]): ScoringInput['scores'] =>
       Object.entries(comps).flatMap(([componentId, vals]) =>
-        vals.flatMap((value, i) => (value == null ? [] : [{ judgeId: `J${i + 1}`, contestantId: cid, componentId, value }])),
+        vals.flatMap((value, i) => (value == null ? [] : [{ judgeId: judgeAt(i), contestantId: cid, componentId, value }])),
       ),
-    ),
+    ).concat(Object.entries(s.producer ?? {}).flatMap(([cid, comps]) =>
+      Object.entries(comps).map(([componentId, value]) => ({ judgeId: null, contestantId: cid, componentId, value })))),
+    penalties: (s.penalties ?? []).map(([contestantId, categoryId, tier]) => ({ contestantId, categoryId, tier })),
     manualWinnerId: s.manualWinnerId,
   }
 }
@@ -337,6 +352,115 @@ describe('computeContest: prelims and finals', () => {
     const r = computeContest(build({ judges: 1, categories: { S: { S: 10 } }, scores: { A: { S: [5] } } }), null)
     expect(r.prelim).toBeNull()
     expect(r.final!.winner).toEqual({ kind: 'decided', contestantId: 'A' })
+  })
+})
+
+describe('reporting as the per-judge average', () => {
+  it('divides each category by its counted judges; ranking and winner are unchanged', () => {
+    const r = computeResults(build({ ...worked, reportAs: 'average' }))
+    expect(r.maxPossible).toBe(50)
+    expect(r.thresholdPoints).toBe(35)
+    const b = r.standings.find(s => s.contestantId === 'B')!
+    expect(b.total).toBe(39)
+    expect(b.categoryTotals).toEqual({ Speech: 16.5, Interview: 14.5, Fantasy: 8 })
+    expect(b.tiebreakPath).toEqual([{ step: 1, value: 31 }, { step: 2, value: 16.5 }])
+    expect(r.winner).toEqual({ kind: 'decided', contestantId: 'B' })
+  })
+})
+
+describe('cross-panel judges', () => {
+  // I: panel 8,8,8,8,8 plus the guests' average (6 and 9 → 7.5) as a 6th value; S: panel only (guest scores ignored).
+  const spec: Spec = {
+    judges: 5, guests: 2, aggregation: 'drop_high_low', categories: { I: { I: 10 }, S: { S: 10 } },
+    catOptions: { I: { guestAverage: true } },
+    scores: { A: { I: [8, 8, 8, 8, 8, 6, 9], S: [5, 6, 7, 8, 9, 1, 1] } },
+  }
+
+  it('their average joins the category as one more judge before dropping high and low', () => {
+    const r = computeResults(build(spec))
+    const a = r.standings[0]!
+    expect(a.categoryTotals).toEqual({ I: 32, S: 21 }) // I drops 7.5 and one 8; S drops 5 and 9
+    expect(r.maxPossible).toBe(70) // I: 4 counted x 10, S: 3 counted x 10
+    expect(a.breakdown.I!.at(-1)).toEqual({ judgeId: CROSS_PANEL, subtotal: 7.5, dropped: true, backfilled: false })
+    expect(a.breakdown.S).toHaveLength(5)
+  })
+
+  it('averages use each category\'s own judge count', () => {
+    const r = computeResults(build({ ...spec, reportAs: 'average' }))
+    expect(r.standings[0]!.categoryTotals).toEqual({ I: 8, S: 7 })
+    expect(r.maxPossible).toBe(20)
+  })
+
+  it('the contestant is incomplete until every cross-panel judge has scored', () => {
+    const r = computeResults(build({ ...spec, scores: { A: { I: [8, 8, 8, 8, 8, 6, null], S: [5, 6, 7, 8, 9] } } }))
+    expect(r.winner.kind).toBe('incomplete')
+    expect(r.standings[0]!.breakdown.I!.at(-1)!.subtotal).toBeNull()
+  })
+})
+
+describe('producer-entered scores (community vote)', () => {
+  const spec: Spec = {
+    judges: 5, aggregation: 'drop_high_low', categories: { S: { S: 10 }, V: { Vote: 5 } },
+    catOptions: { V: { scoredBy: 'producer' } },
+    scores: { A: { S: [5, 6, 7, 8, 9] } }, producer: { A: { Vote: 3 } },
+  }
+
+  it('count once on the sum scale', () => {
+    const r = computeResults(build(spec))
+    expect(r.standings[0]!.categoryTotals).toEqual({ S: 21, V: 3 })
+    expect(r.maxPossible).toBe(35)
+    expect(r.standings[0]!.breakdown.V).toEqual([{ judgeId: PRODUCER, subtotal: 3, dropped: false, backfilled: false }])
+  })
+
+  it('count once on the average scale', () => {
+    const r = computeResults(build({ ...spec, reportAs: 'average' }))
+    expect(r.standings[0]!.categoryTotals).toEqual({ S: 7, V: 3 })
+    expect(r.maxPossible).toBe(15)
+  })
+
+  it('a missing vote leaves the contestant incomplete', () => {
+    expect(computeResults(build({ ...spec, producer: {} })).winner.kind).toBe('incomplete')
+  })
+})
+
+describe('deductions', () => {
+  const spec: Spec = {
+    judges: 5, aggregation: 'drop_high_low', reportAs: 'average', categories: { Speech: { Speech: 100 } },
+    catOptions: { Speech: { deductions: [{ label: '16–60 s over', points: 5 }, { label: '61 s+ over', points: 10 }, { label: 'Over time', percent: 10 }] } },
+    scores: { A: { Speech: [70, 80, 80, 80, 90] }, B: { Speech: [78, 78, 78, 78, 78] } },
+  }
+
+  it('points come off the reported (average) composite, per occurrence', () => {
+    const r = computeResults(build({ ...spec, penalties: [['A', 'Speech', 0], ['A', 'Speech', 1]] }))
+    const a = r.standings.find(s => s.contestantId === 'A')!
+    expect(a.categoryTotals.Speech).toBe(65) // 80 - 5 - 10
+    expect(a.deductions).toEqual([{ categoryId: 'Speech', label: '16–60 s over', amount: 5 }, { categoryId: 'Speech', label: '61 s+ over', amount: 10 }])
+    expect(r.winner).toEqual({ kind: 'decided', contestantId: 'B' })
+  })
+
+  it('points on the sum scale come off the sum', () => {
+    const r = computeResults(build({ ...spec, reportAs: 'total', penalties: [['A', 'Speech', 0]] }))
+    expect(r.standings.find(s => s.contestantId === 'A')!.categoryTotals.Speech).toBe(235) // 240 - 5
+  })
+
+  it('percent comes off the aggregated category', () => {
+    const r = computeResults(build({ ...spec, penalties: [['A', 'Speech', 2]] }))
+    expect(r.standings.find(s => s.contestantId === 'A')!.categoryTotals.Speech).toBe(72)
+  })
+})
+
+describe('minimum only for a single contestant', () => {
+  const spec: Spec = {
+    judges: 1, thresholdPct: 80, thresholdSingleOnly: true, categories: { S: { S: 10 } },
+    scores: { A: { S: [5] }, B: { S: [4] } },
+  }
+  it('is ignored when several compete', () => {
+    const r = computeResults(build(spec))
+    expect(r.winner).toEqual({ kind: 'decided', contestantId: 'A' })
+    expect(r.thresholdPoints).toBeNull()
+  })
+  it('applies to a lone contestant', () => {
+    expect(computeResults(build({ ...spec, scores: { A: { S: [5] } } })).winner).toEqual({ kind: 'no_title', reason: 'below_threshold' })
   })
 })
 

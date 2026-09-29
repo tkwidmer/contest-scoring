@@ -11,11 +11,11 @@ type Contestant = {
   id: string; display_name: string; number: number | null; represents: string | null; sort: number; withdrawn: boolean
   contestant_contacts: { email: string } | null
 }
-type Judge = { id: string; name: string; email: string | null; user_id: string | null; sort: number }
+type Judge = { id: string; name: string; email: string | null; user_id: string | null; sort: number; guest: boolean }
 type Recusal = { judge_id: string; contestant_id: string }
 
 const blankContestant = { display_name: '', number: '', represents: '', email: '' }
-const blankJudge = { name: '', email: '' }
+const blankJudge = { name: '', email: '', guest: false }
 
 export function ContestPeople() {
   const { contestId = '' } = useParams()
@@ -34,7 +34,7 @@ export function ContestPeople() {
       supabase.from('contestants')
         .select('id, display_name, number, represents, sort, withdrawn, contestant_contacts(email)')
         .eq('contest_id', contestId).order('sort').order('created_at'),
-      supabase.from('judges').select('id, name, email, user_id, sort').eq('contest_id', contestId).order('sort').order('created_at'),
+      supabase.from('judges').select('id, name, email, user_id, sort, guest').eq('contest_id', contestId).order('sort').order('created_at'),
       supabase.from('recusals').select('judge_id, contestant_id, judges!inner(contest_id)').eq('judges.contest_id', contestId),
       supabase.auth.getUser(),
     ])
@@ -80,7 +80,7 @@ export function ContestPeople() {
   async function addJudge(e: FormEvent) {
     e.preventDefault()
     const ok = await run(supabase.from('judges').insert({
-      contest_id: contestId, name: newJudge.name.trim(), email: newJudge.email.trim() || null, sort: nextSort(judges),
+      contest_id: contestId, name: newJudge.name.trim(), email: newJudge.email.trim() || null, sort: nextSort(judges), guest: newJudge.guest,
     }))
     if (ok) setNewJudge(blankJudge)
   }
@@ -192,9 +192,13 @@ export function ContestPeople() {
           {judges.length > 0 && (
             <ul className={`${card} divide-y divide-rule`}>
               {judges.map(j => (
-                <li key={j.id} className="grid items-center gap-2 px-3 py-2 sm:grid-cols-[2fr_2fr_auto_auto]">
+                <li key={j.id} className="grid items-center gap-2 px-3 py-2 sm:grid-cols-[2fr_2fr_auto_auto_auto]">
                   {text(j.name, v => run(supabase.from('judges').update({ name: v ?? j.name }).eq('id', j.id)), { 'aria-label': `${j.name} name` })}
                   {text(j.email, v => run(supabase.from('judges').update({ email: v }).eq('id', j.id)), { 'aria-label': `${j.name} email`, type: 'email' })}
+                  <label className="flex items-center gap-1 text-xs text-muted" title="Scores only cross-panel categories; the cross-panel judges' average counts as one more judge">
+                    <input type="checkbox" checked={j.guest} disabled={!isProducer}
+                      onChange={e => run(supabase.from('judges').update({ guest: e.target.checked }).eq('id', j.id))} /> cross-panel
+                  </label>
                   <span className="font-mono text-xs text-muted">{j.user_id ? 'signed in' : 'no account'}</span>
                   <span>{isProducer && draft && <button type="button" className={iconButton} aria-label={`Delete ${j.name}`}
                     onClick={() => window.confirm(`Delete judge ${j.name}?`) && run(supabase.from('judges').delete().eq('id', j.id))}>✕</button>}</span>
@@ -203,13 +207,16 @@ export function ContestPeople() {
             </ul>
           )}
           {isProducer && (
-            <form onSubmit={addJudge} className="grid gap-2 sm:grid-cols-[2fr_2fr_auto] sm:items-end">
+            <form onSubmit={addJudge} className="grid gap-2 sm:grid-cols-[2fr_2fr_auto_auto] sm:items-end">
               <div className="grid gap-1"><label htmlFor="nj-name" className={label}>Judge name</label>
                 <input id="nj-name" required maxLength={120} className={input} value={newJudge.name}
                   onChange={e => setNewJudge({ ...newJudge, name: e.target.value })} /></div>
               <div className="grid gap-1"><label htmlFor="nj-email" className={label}>Email (optional, for sign-in later)</label>
                 <input id="nj-email" type="email" className={input} value={newJudge.email}
                   onChange={e => setNewJudge({ ...newJudge, email: e.target.value })} /></div>
+              <label className="flex items-center gap-1 self-center text-sm">
+                <input type="checkbox" checked={newJudge.guest} onChange={e => setNewJudge({ ...newJudge, guest: e.target.checked })} /> Cross-panel judge
+              </label>
               <button className={button}>Add judge</button>
             </form>
           )}
@@ -230,14 +237,14 @@ export function ContestPeople() {
                 <thead>
                   <tr className="border-b border-rule">
                     <th className="px-3 py-2 text-left font-normal text-muted">Contestant</th>
-                    {judges.map(j => <th key={j.id} className="px-3 py-2 font-medium">{j.name}</th>)}
+                    {judges.filter(j => !j.guest).map(j => <th key={j.id} className="px-3 py-2 font-medium">{j.name}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {contestants.filter(c => !c.withdrawn).map(c => (
                     <tr key={c.id} className="border-b border-rule last:border-0">
                       <th scope="row" className="px-3 py-1.5 text-left font-normal">{c.number != null && <span className="font-mono text-muted">{c.number} </span>}{c.display_name}</th>
-                      {judges.map(j => (
+                      {judges.filter(j => !j.guest).map(j => (
                         <td key={j.id} className="px-3 text-center">
                           <input type="checkbox" aria-label={`${j.name} recused from ${c.display_name}`}
                             checked={recused.has(`${j.id}|${c.id}`)} onChange={() => toggleRecusal(j.id, c.id)} />

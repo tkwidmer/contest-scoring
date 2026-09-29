@@ -2,6 +2,13 @@
 
 A pure TypeScript module at `src/lib/scoring/` with no I/O and no Supabase import. The browser runs it for live standings. **Publish** runs the same code and freezes its output into `published_results.snapshot`. It's the most important code in the app, so every rule below is backed by a Vitest fixture.
 
+## Scoring options
+- **Report as average** (`reportAs: 'average'`): each category is its kept judges' total divided by how many were kept; totals, maximum, minimum and tiebreak values are on that scale. Internally values are multiplied by the lcm of the judge counts so arithmetic stays exact.
+- **Producer-entered categories** (`scoredBy: 'producer'`): one score per contestant (stored with no judge), added once on the reported scale.
+- **Cross-panel judges** (`guest` judges, `guestAverage` categories): their mean per component (rounded to 0.01) is one extra value in that category before dropping high and low; they are ignored elsewhere.
+- **Deductions** (`penalties` against a category's `deductions` tiers): points come off the category on the reported scale, per occurrence; percent comes off the aggregated category. Never below zero. Every-judge tiebreak totals get the same deductions.
+- **Lone-contestant minimum** (`thresholdSingleOnly`): the minimum only applies when one contestant competes.
+
 ## Rounds
 `computeContest(input, rounds)` wraps `computeResults`. Without rounds it is one call. With rounds:
 - **Prelims** run on prelim categories only, with the prelim aggregation, no threshold and no manual winner.

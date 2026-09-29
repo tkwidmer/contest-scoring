@@ -8,12 +8,16 @@ import { ContestHeader } from '../components/ContestHeader'
 import { buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
 
 type Component = { id: string; name: string; min_points: number; max_points: number; step: number; sort: number }
-type Category = { id: string; name: string; sort: number; drop_rank: number | null; round: string; components: Component[] }
+type Deduction = { label: string; points?: number; percent?: number }
+type Category = {
+  id: string; name: string; sort: number; drop_rank: number | null; round: string; components: Component[]
+  scored_by: string; guest_average: boolean; deductions: Deduction[]
+}
 type Step = { step_no: number; category_ids: string[]; all_judges: boolean }
 type Contest = {
   id: string; name: string; status: string; aggregation: string; threshold_pct: number | null
   anonymize_comments: boolean; event_id: string; events: { name: string } | null
-  finalist_count: number | null; prelim_aggregation: string; prelim_carries: boolean
+  finalist_count: number | null; prelim_aggregation: string; prelim_carries: boolean; report_as: string; threshold_single_only: boolean
 }
 
 const num = (s: string) => (s.trim() === '' ? null : Number(s))
@@ -30,10 +34,10 @@ export function ContestSetup() {
   const load = useCallback(async () => {
     const [c, cats, st] = await Promise.all([
       supabase.from('contests')
-        .select('id, name, status, aggregation, threshold_pct, anonymize_comments, event_id, events(name), finalist_count, prelim_aggregation, prelim_carries')
+        .select('id, name, status, aggregation, threshold_pct, anonymize_comments, event_id, events(name), finalist_count, prelim_aggregation, prelim_carries, report_as, threshold_single_only')
         .eq('id', contestId).maybeSingle(),
       supabase.from('categories')
-        .select('id, name, sort, drop_rank, round, components(id, name, min_points, max_points, step, sort)')
+        .select('id, name, sort, drop_rank, round, scored_by, guest_average, deductions, components(id, name, min_points, max_points, step, sort)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
       supabase.from('tiebreak_steps').select('step_no, category_ids, all_judges').eq('contest_id', contestId).order('step_no'),
     ])
@@ -41,7 +45,7 @@ export function ContestSetup() {
     if (failed) return setError(friendly(failed))
     if (!c.data) return setError("This contest doesn't exist, or you're not a member of its organization.")
     setContest(c.data)
-    setCategories(cats.data ?? [])
+    setCategories((cats.data ?? []).map(c => ({ ...c, deductions: c.deductions as Deduction[] })))
     setSteps(st.data ?? [])
   }, [contestId])
 
@@ -55,14 +59,15 @@ export function ContestSetup() {
   const locked = contest.status !== 'draft'
   const rounds = contest.finalist_count != null
   const catMax = (c: Category) => c.components.reduce((t, k) => t + k.max_points, 0)
-  const perJudgeMax = categories.reduce((s, c) => s + catMax(c), 0)
-  const prelimMax = categories.filter(c => c.round === 'prelim').reduce((s, c) => s + catMax(c), 0)
+  const judged = categories.filter(c => c.scored_by === 'judges') // producer-entered categories aren't per judge
+  const perJudgeMax = judged.reduce((s, c) => s + catMax(c), 0)
+  const prelimMax = judged.filter(c => c.round === 'prelim').reduce((s, c) => s + catMax(c), 0)
   const dropOrder = [...categories].sort((a, b) => (a.drop_rank ?? Infinity) - (b.drop_rank ?? Infinity))
   const catName = new Map(categories.map(c => [c.id, c.name]))
 
-  const updateContest = (patch: Partial<Pick<Contest, 'name' | 'aggregation' | 'threshold_pct' | 'anonymize_comments' | 'finalist_count' | 'prelim_aggregation' | 'prelim_carries'>>) =>
+  const updateContest = (patch: Partial<Pick<Contest, 'name' | 'aggregation' | 'threshold_pct' | 'anonymize_comments' | 'finalist_count' | 'prelim_aggregation' | 'prelim_carries' | 'report_as' | 'threshold_single_only'>>) =>
     run(supabase.from('contests').update(patch).eq('id', contest.id))
-  const updateCategory = (id: string, patch: Partial<Pick<Category, 'name' | 'round'>>) => run(supabase.from('categories').update(patch).eq('id', id))
+  const updateCategory = (id: string, patch: Partial<Pick<Category, 'name' | 'round' | 'scored_by' | 'guest_average' | 'deductions'>>) => run(supabase.from('categories').update(patch).eq('id', id))
   const updateComponent = (id: string, patch: Partial<Component>) => run(supabase.from('components').update(patch).eq('id', id))
 
   const addCategory = () => run(supabase.from('categories').insert({
@@ -159,6 +164,21 @@ export function ContestSetup() {
                   ? 'Leave blank to always award the title.'
                   : `A contestant needs ${contest.threshold_pct}% of the maximum possible points to win the title.`}
               </p>
+              {contest.threshold_pct != null && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={contest.threshold_single_only} disabled={locked}
+                    onChange={e => updateContest({ threshold_single_only: e.target.checked })} />
+                  Only when there's a single contestant
+                </label>
+              )}
+            </div>
+            <div className="grid gap-1">
+              <label htmlFor="c-report" className={label}>Report totals as</label>
+              <select id="c-report" value={contest.report_as} disabled={locked} className={input}
+                onChange={e => updateContest({ report_as: e.target.value })}>
+                <option value="total">The sum of the counted judges</option>
+                <option value="average">The average of the counted judges (e.g. a perfect score of 500)</option>
+              </select>
             </div>
             <label className="flex items-center gap-2 self-center">
               <input type="checkbox" checked={rounds} disabled={locked}
@@ -218,6 +238,11 @@ export function ContestSetup() {
                     <option value="final">Finals</option>
                   </select>
                 )}
+                <select aria-label={`${c.name} scored by`} value={c.scored_by} disabled={locked} className={`${input} w-auto py-1 text-sm`}
+                  onChange={e => updateCategory(c.id, { scored_by: e.target.value })}>
+                  <option value="judges">Scored by judges</option>
+                  <option value="producer">Entered once by the producer (e.g. community vote)</option>
+                </select>
                 <span className="font-mono text-sm text-muted">{fmt(catMax(c))} pts</span>
                 {!locked && <>
                   <button type="button" className={iconButton} aria-label={`Move ${c.name} up`} disabled={i === 0}
@@ -257,6 +282,14 @@ export function ContestSetup() {
                 </table>
               </div>
               {!locked && <button type="button" className={`${buttonQuiet} justify-self-start`} onClick={() => addComponent(c)}>+ Add component</button>}
+              {c.scored_by === 'judges' && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={c.guest_average} disabled={locked}
+                    onChange={e => updateCategory(c.id, { guest_average: e.target.checked })} />
+                  Cross-panel judges also score this; their average counts as one more judge
+                </label>
+              )}
+              <Deductions value={c.deductions} locked={locked} onSave={d => updateCategory(c.id, { deductions: d })} />
             </div>
           ))}
           {!locked && <button type="button" className={`${buttonQuiet} justify-self-start`} onClick={addCategory}>+ Add category</button>}
@@ -345,6 +378,42 @@ export function ContestSetup() {
           {tpl.saved && <p role="status" className="text-sm text-muted">Saved "{tpl.saved}". It's now available when adding a contest.</p>}
         </section>
       </fieldset>
+    </div>
+  )
+}
+
+// Tally-master deductions a category allows (e.g. overtime), as points off the reported score or a percentage.
+function Deductions({ value, locked, onSave }: { value: Deduction[]; locked: boolean; onSave: (d: Deduction[]) => Promise<boolean> }) {
+  const set = (i: number, patch: Partial<Deduction> & { unit?: 'points' | 'percent'; amount?: number }) => {
+    const next = value.map((d, j) => {
+      if (j !== i) return d
+      const amount = patch.amount ?? d.points ?? d.percent ?? 0
+      const unit = patch.unit ?? (d.percent != null ? 'percent' : 'points')
+      return { label: patch.label ?? d.label, ...(unit === 'percent' ? { percent: amount } : { points: amount }) }
+    })
+    return onSave(next)
+  }
+  if (locked && value.length === 0) return null
+  return (
+    <div className="grid gap-1 text-sm">
+      <span className="text-muted">Deductions the tally master can apply</span>
+      {value.map((d, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2">
+          <input aria-label="Deduction reason" key={d.label} defaultValue={d.label} disabled={locked} placeholder="16–60 seconds over"
+            className={`${input} w-56 py-1`} onBlur={e => e.target.value !== d.label && set(i, { label: e.target.value })} />
+          <span>−</span>
+          <input aria-label="Deduction amount" key={String(d.points ?? d.percent)} type="number" min={0} step="0.5" disabled={locked}
+            defaultValue={d.points ?? d.percent ?? 0} className={`${input} w-20 py-1 font-mono`}
+            onBlur={e => { const v = num(e.target.value); if (v != null && v !== (d.points ?? d.percent)) set(i, { amount: v }) }} />
+          <select aria-label="Deduction unit" value={d.percent != null ? 'percent' : 'points'} disabled={locked} className={`${input} w-auto py-1`}
+            onChange={e => set(i, { unit: e.target.value as 'points' | 'percent' })}>
+            <option value="points">points off the reported score</option>
+            <option value="percent">% of the category</option>
+          </select>
+          {!locked && <button type="button" className={iconButton} aria-label={`Remove ${d.label}`} onClick={() => onSave(value.filter((_, j) => j !== i))}>✕</button>}
+        </div>
+      ))}
+      {!locked && <button type="button" className={`${buttonQuiet} justify-self-start`} onClick={() => onSave([...value, { label: 'Over time', points: 5 }])}>+ Add deduction</button>}
     </div>
   )
 }

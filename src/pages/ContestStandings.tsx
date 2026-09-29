@@ -4,7 +4,7 @@ import type { Json } from '../lib/database.types'
 import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
 import { useWrites } from '../lib/useWrites'
-import { computeContest, type Aggregation, type Result, type Rounds, type ScoringInput } from '../lib/scoring'
+import { CROSS_PANEL, PRODUCER, computeContest, type Aggregation, type Deduction, type Result, type Rounds, type ScoringInput } from '../lib/scoring'
 import { ContestHeader } from '../components/ContestHeader'
 import { button, buttonQuiet, card, h2, input } from '../components/ui'
 
@@ -13,9 +13,10 @@ type Contest = {
   aggregation: string; threshold_pct: number | null; manual_winner_contestant_id: string | null
   manual_winner_reason: string | null; final_result: Json | null; finalized_at: string | null
   finalist_count: number | null; prelim_aggregation: string; prelim_carries: boolean; finalists_confirmed_at: string | null
+  report_as: string; threshold_single_only: boolean
 }
 type Named = { id: string; name: string }
-type Names = { contestants: Map<string, string>; judges: Named[]; categories: (Named & { round: string })[] }
+type Names = { contestants: Map<string, string>; judges: (Named & { guest: boolean })[]; categories: (Named & { round: string; scored_by: string; guest_average: boolean })[] }
 
 const fmt = (n: number) => Number(n.toFixed(2)).toString()
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`
@@ -37,30 +38,35 @@ export function ContestStandings() {
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
 
   const load = useCallback(async () => {
-    const [c, cats, cs, js, rs, sc, ts] = await Promise.all([
-      supabase.from('contests').select('id, name, status, event_id, events(name), aggregation, threshold_pct, manual_winner_contestant_id, manual_winner_reason, final_result, finalized_at, finalist_count, prelim_aggregation, prelim_carries, finalists_confirmed_at')
+    const [c, cats, cs, js, rs, sc, ts, pn] = await Promise.all([
+      supabase.from('contests').select('id, name, status, event_id, events(name), aggregation, threshold_pct, manual_winner_contestant_id, manual_winner_reason, final_result, finalized_at, finalist_count, prelim_aggregation, prelim_carries, finalists_confirmed_at, report_as, threshold_single_only')
         .eq('id', contestId).maybeSingle(),
-      supabase.from('categories').select('id, name, round, components(id, min_points, max_points, step)')
+      supabase.from('categories').select('id, name, round, scored_by, guest_average, deductions, components(id, min_points, max_points, step)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
       supabase.from('contestants').select('id, display_name, number, withdrawn, finalist').eq('contest_id', contestId).order('sort'),
-      supabase.from('judges').select('id, name').eq('contest_id', contestId).order('sort'),
+      supabase.from('judges').select('id, name, guest').eq('contest_id', contestId).order('sort'),
       supabase.from('recusals').select('judge_id, contestant_id, judges!inner(contest_id)').eq('judges.contest_id', contestId),
       supabase.from('scores').select('judge_id, contestant_id, component_id, value').eq('contest_id', contestId),
       supabase.from('tiebreak_steps').select('category_ids, all_judges').eq('contest_id', contestId).order('step_no'),
+      supabase.from('penalties').select('contestant_id, category_id, tier').eq('contest_id', contestId),
     ])
-    const failed = c.error ?? cats.error ?? cs.error ?? js.error ?? rs.error ?? sc.error ?? ts.error
+    const failed = c.error ?? cats.error ?? cs.error ?? js.error ?? rs.error ?? sc.error ?? ts.error ?? pn.error
     if (failed) return setError(friendly(failed))
     if (!c.data) return setError("This contest doesn't exist, or you're not a member of its organization.")
     setContest(c.data)
     setInput({
       aggregation: c.data.aggregation as Aggregation,
       thresholdPct: c.data.threshold_pct,
+      thresholdSingleOnly: c.data.threshold_single_only,
+      reportAs: c.data.report_as as ScoringInput['reportAs'],
+      penalties: (pn.data ?? []).map(p => ({ contestantId: p.contestant_id, categoryId: p.category_id, tier: p.tier })),
       categories: (cats.data ?? []).map(cat => ({
         id: cat.id, name: cat.name,
+        scoredBy: cat.scored_by as 'judges' | 'producer', guestAverage: cat.guest_average, deductions: cat.deductions as Deduction[],
         components: cat.components.map(k => ({ id: k.id, min: k.min_points, max: k.max_points, step: k.step })),
       })),
       tiebreakSteps: (ts.data ?? []).map(t => ({ categoryIds: t.category_ids, allJudges: t.all_judges })),
-      judges: (js.data ?? []).map(j => ({ id: j.id })),
+      judges: (js.data ?? []).map(j => ({ id: j.id, guest: j.guest })),
       contestants: (cs.data ?? []).map(x => ({ id: x.id, withdrawn: x.withdrawn })),
       recusals: (rs.data ?? []).map(r => ({ judgeId: r.judge_id, contestantId: r.contestant_id })),
       scores: (sc.data ?? []).map(s => ({ judgeId: s.judge_id, contestantId: s.contestant_id, componentId: s.component_id, value: s.value })),
@@ -70,7 +76,7 @@ export function ContestStandings() {
     setNames({
       contestants: new Map((cs.data ?? []).map(x => [x.id, x.number != null ? `${x.number} · ${x.display_name}` : x.display_name])),
       judges: js.data ?? [],
-      categories: (cats.data ?? []).map(cat => ({ id: cat.id, name: cat.name, round: cat.round })),
+      categories: (cats.data ?? []).map(cat => ({ id: cat.id, name: cat.name, round: cat.round, scored_by: cat.scored_by, guest_average: cat.guest_average })),
     })
     setLoadedAt(new Date())
   }, [contestId])
@@ -97,23 +103,30 @@ export function ContestStandings() {
   const final: Result | null = finalized && contest.final_result ? contest.final_result as unknown as Result : live.final
   const prelim = live.prelim
   const name = (id: string | null | undefined) => (id && names.contestants.get(id)) || 'Unknown'
+  const scaleNote = contest.report_as === 'average' ? ' · category scores are the average of the counted judges' : ''
 
   // Score cells still to enter, per judge and category (recused cells and non-finalists in the finals don't count).
   const recused = new Set(input_.recusals.map(r => `${r.judgeId}|${r.contestantId}`))
   const entered = new Set(input_.scores.map(s => `${s.judgeId}|${s.contestantId}|${s.componentId}`))
   const active = input_.contestants.filter(c => !c.withdrawn)
+  // Rows of the progress grid: each judge, plus "Producer" when some categories are producer-entered.
+  const fillers = [...names.judges, ...(names.categories.some(c => c.scored_by === 'producer') ? [{ id: PRODUCER, name: 'Producer', guest: false }] : [])]
   const progress = (judgeId: string, catId: string) => {
     const cat = names.categories.find(c => c.id === catId)!
+    const guest = names.judges.find(j => j.id === judgeId)?.guest
+    const fills = judgeId === PRODUCER ? cat.scored_by === 'producer' : cat.scored_by === 'judges' && (!guest || cat.guest_average)
+    if (!fills) return { done: 0, total: 0 }
     const comps = input_.categories.find(c => c.id === catId)!.components
     const who = hasRounds && cat.round === 'final' ? active.filter(c => confirmed.includes(c.id)) : active
+    const key = judgeId === PRODUCER ? 'null' : judgeId
     let done = 0, total = 0
     for (const c of who) {
-      if (recused.has(`${judgeId}|${c.id}`)) continue
-      for (const k of comps) { total++; if (entered.has(`${judgeId}|${c.id}|${k.id}`)) done++ }
+      if (!guest && recused.has(`${judgeId}|${c.id}`)) continue
+      for (const k of comps) { total++; if (entered.has(`${key}|${c.id}|${k.id}`)) done++ }
     }
     return { done, total }
   }
-  const missingIn = (round?: string) => names.judges.reduce((s, j) => s + names.categories
+  const missingIn = (round?: string) => fillers.reduce((s, j) => s + names.categories
     .filter(c => !round || !hasRounds || c.round === round)
     .reduce((t, c) => { const p = progress(j.id, c.id); return t + p.total - p.done }, 0), 0)
 
@@ -196,13 +209,13 @@ export function ContestStandings() {
       {final && (
         <StandingsTable title={hasRounds ? 'Finals' : 'Standings'} result={final} names={names}
           categories={names.categories.filter(c => !hasRounds || contest.prelim_carries || c.round === 'final')}
-          note={aggregationText[contest.aggregation]!} thresholdPct={contest.threshold_pct} />
+          note={aggregationText[contest.aggregation]! + scaleNote} thresholdPct={contest.threshold_pct} />
       )}
 
       {prelim && (
         <section className="grid gap-2">
           <StandingsTable title="Preliminaries" result={prelim} names={names} cutAfter={contest.finalist_count!}
-            categories={names.categories.filter(c => c.round === 'prelim')} note={aggregationText[contest.prelim_aggregation]!}
+            categories={names.categories.filter(c => c.round === 'prelim')} note={aggregationText[contest.prelim_aggregation]! + scaleNote}
             finalists={contest.finalists_confirmed_at ? confirmed : null} />
           {!finalized && prelim.cut.complete && (
             <div className={`${card} grid gap-3 px-4 py-3 print:hidden`}>
@@ -245,9 +258,9 @@ export function ContestStandings() {
             <thead><tr className="border-b border-rule text-muted"><th className="px-3 py-2 text-left font-normal">Judge</th>
               {names.categories.map(c => <th key={c.id} className="px-3 font-normal">{c.name}{hasRounds && <span className="block text-xs">{c.round === 'prelim' ? 'prelims' : 'finals'}</span>}</th>)}</tr></thead>
             <tbody>
-              {names.judges.map(j => (
+              {fillers.map(j => (
                 <tr key={j.id} className="border-b border-rule last:border-0">
-                  <th className="px-3 py-1.5 text-left font-normal">{j.name}</th>
+                  <th className="px-3 py-1.5 text-left font-normal">{j.name}{j.guest && <span className="text-xs text-muted"> (cross-panel)</span>}</th>
                   {names.categories.map(c => {
                     const p = progress(j.id, c.id)
                     return <td key={c.id} className={`px-3 text-center font-mono ${p.done === p.total ? 'text-muted' : ''}`}>
@@ -271,7 +284,10 @@ type TableProps = {
 function StandingsTable({ title, result, names, categories, note, thresholdPct, cutAfter, finalists }: TableProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const name = (id: string) => names.contestants.get(id) ?? 'Unknown'
-  const judgeName = new Map(names.judges.map(j => [j.id, j.name]))
+  const judgeName = new Map<string, string>([...names.judges.map(j => [j.id, j.name] as const), [CROSS_PANEL, 'Cross-panel'], [PRODUCER, 'Producer']])
+  // Breakdown columns: the judges who appear in any category, then the cross-panel average and producer entries.
+  const present = new Set(result.standings.flatMap(s => Object.values(s.breakdown).flat().map(b => b.judgeId)))
+  const breakdownCols = [...names.judges.map(j => j.id), CROSS_PANEL, PRODUCER].filter(id => present.has(id))
   const firstBelow = result.thresholdPoints == null ? -1 : result.standings.findIndex(s => s.total < result.thresholdPoints!)
   // The cut line sits after the last contestant ranked within the top N (ties at the line sit below it).
   // Once finalists are confirmed a tie can put a finalist below a non-finalist, so the badge and muting say it instead.
@@ -325,21 +341,30 @@ function StandingsTable({ title, result, names, categories, note, thresholdPct, 
                   <td />
                   <td colSpan={cols - 1} className="px-3 py-2">
                     <table className="text-xs">
-                      <thead><tr className="text-muted"><th />{names.judges.map(j => <th key={j.id} className="px-2 font-normal">{j.name}</th>)}</tr></thead>
+                      <thead><tr className="text-muted"><th />{breakdownCols.map(id => <th key={id} className="px-2 font-normal">{judgeName.get(id)}</th>)}</tr></thead>
                       <tbody>
                         {categories.map(c => (
                           <tr key={c.id}>
                             <th className="pr-3 text-left font-normal text-muted">{c.name}</th>
-                            {(s.breakdown[c.id] ?? []).map(b => (
-                              <td key={b.judgeId} className={`px-2 text-right font-mono ${b.dropped ? 'text-muted line-through' : ''}`}
-                                title={[b.dropped && 'Dropped', b.backfilled && `${judgeName.get(b.judgeId)} is recused; filled with the others' average`].filter(Boolean).join('. ') || undefined}>
-                                {b.subtotal == null ? '–' : fmt(b.subtotal)}{b.backfilled && <sup>avg</sup>}
-                              </td>
-                            ))}
+                            {breakdownCols.map(id => {
+                              const b = s.breakdown[c.id]?.find(x => x.judgeId === id)
+                              if (!b) return <td key={id} />
+                              return (
+                                <td key={id} className={`px-2 text-right font-mono ${b.dropped ? 'text-muted line-through' : ''}`}
+                                  title={[b.dropped && 'Dropped', b.backfilled && `${judgeName.get(b.judgeId)} is recused; filled with the others' average`].filter(Boolean).join('. ') || undefined}>
+                                  {b.subtotal == null ? '–' : fmt(b.subtotal)}{b.backfilled && <sup>avg</sup>}
+                                </td>
+                              )
+                            })}
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    {s.deductions.length > 0 && (
+                      <p className="mt-2 text-xs text-danger">
+                        Deductions: {s.deductions.map(d => `${categories.find(c => c.id === d.categoryId)?.name ?? ''} −${fmt(d.amount)} (${d.label})`).join(', ')}
+                      </p>
+                    )}
                     {s.tiebreakPath && (
                       <p className="mt-2 text-xs text-muted">Tiebreak: {s.tiebreakPath.map(p => `step ${p.step} = ${fmt(p.value)}`).join(', ')}</p>
                     )}

@@ -43,6 +43,7 @@ A web platform where producers:
 | D7 | Recusal | Explicit recusal. The slot is backfilled with the average of the other judges, per component. Blank scores that aren't recusals block finalizing. | 02 |
 | D8 | Threshold | % of max possible, checked against the final aggregated total. Below it, no title. | 02 |
 | D9 | Tiebreak | The producer ranks categories in drop order. Steps are auto-generated (N-1 → … → 1 categories) and each step can be edited, including **counting every judge** (adding the dropped high and low back). When steps run out, the tie is flagged for a manual decision. | 02 |
+| D24 | Scoring options | Per contest: report totals as the **sum** or the **per-judge average** of counted judges; the minimum can apply **only to a lone contestant**. Per category: **producer-entered** (one score per contestant, e.g. community vote), **cross-panel** (another panel's judges score it; their average counts as one more judge), and **deductions** the tally master applies (points off the reported score, or a %). | 01, 02 |
 | D23 | Rounds | Optional **prelims → finals** in one contest: categories are marked prelim or final, the top N advance (ties at the line go through the tiebreak steps, then the producer's pick), and prelim scores either carry into the finals (IMBB) or not (IML). The producer confirms the cut. | 01, 02 |
 | D10 | Locking | A judge submits a sheet and it locks. A producer can unlock it, giving a reason. Every change goes to an append-only audit log. | 01, 03 |
 | D11 | Lifecycle | Contest: `draft → scoring → finalized → published`. | 01 |
@@ -67,7 +68,7 @@ A web platform where producers:
 - **A6** Migrations use Supabase CLI timestamped files and the local stack, not Inkborn's hand-numbered SQL, because type generation and RLS tests need them.
 
 ## Non-goals (for now)
-- % weighted categories, the Average aggregation, judges who only score some categories (e.g. IMsL cross-panel interview), score penalties (e.g. speech overtime)
+- % weighted categories (use points equal to the weight), excluding one randomly drawn judge per category (WSLO; approximated by dropping high and low)
 - Emailing comments from the app, a contestant login portal
 - Realtime updates, offline-first PWA
 - Billing / paid plans

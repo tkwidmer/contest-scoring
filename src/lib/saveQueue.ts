@@ -3,7 +3,7 @@
 // stops, and retried with backoff while the venue Wi-Fi is down. Rejections from the database
 // (bad value, locked sheet, no permission) are not retried; the cell shows the message instead.
 
-export type Cell = { judge_id: string; contestant_id: string; component_id: string; value: number | null } // null = clear
+export type Cell = { judge_id: string | null; contestant_id: string; component_id: string; value: number | null } // value null = clear; judge null = producer-entered
 export type SendResult = { ok: true } | { ok: false; retry: boolean; message: string }
 export type QueueState = { pending: number; failing: Map<string, string>; offline: boolean }
 
