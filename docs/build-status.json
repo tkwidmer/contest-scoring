@@ -1,0 +1,369 @@
+{
+  "project": "Contest Scoring",
+  "updated": "2026-09-29",
+  "statuses": [
+    "todo",
+    "in_progress",
+    "blocked",
+    "done"
+  ],
+  "phases": [
+    {
+      "id": "D",
+      "name": "Design",
+      "goal": "Settle the design and document it.",
+      "epics": [
+        {
+          "id": "D1",
+          "name": "Design docs",
+          "tasks": [
+            {
+              "id": "D1.1",
+              "title": "Grilling session: decisions D1–D22",
+              "status": "done",
+              "doc": "design/00-overview.md"
+            },
+            {
+              "id": "D1.2",
+              "title": "Domain model + ERD",
+              "status": "done",
+              "doc": "design/01-domain-model.md"
+            },
+            {
+              "id": "D1.3",
+              "title": "Scoring engine spec + worked example",
+              "status": "done",
+              "doc": "design/02-scoring-engine.md"
+            },
+            {
+              "id": "D1.4",
+              "title": "Auth, roles, RLS matrix",
+              "status": "done",
+              "doc": "design/03-auth-rls.md"
+            },
+            {
+              "id": "D1.5",
+              "title": "UX flows + route map",
+              "status": "done",
+              "doc": "design/04-ux-flows.md"
+            },
+            {
+              "id": "D1.6",
+              "title": "Architecture + repo layout",
+              "status": "done",
+              "doc": "design/05-architecture.md"
+            },
+            {
+              "id": "D1.7",
+              "title": "Confirm assumed defaults A1–A6",
+              "status": "todo",
+              "doc": "design/00-overview.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P0",
+      "name": "Foundations",
+      "goal": "An empty app is deployed, CI is green, and you can sign in.",
+      "epics": [
+        {
+          "id": "P0.1",
+          "name": "Repo & tooling",
+          "tasks": [
+            {
+              "id": "P0.1.1",
+              "title": "git init, GitHub repo, CLAUDE.md",
+              "status": "in_progress",
+              "doc": "design/05-architecture.md",
+              "note": "Local repo + CLAUDE.md done; GitHub remote pending"
+            },
+            {
+              "id": "P0.1.2",
+              "title": "Vite + React 19 + TS + Tailwind 4 scaffold",
+              "status": "done",
+              "doc": "design/05-architecture.md"
+            },
+            {
+              "id": "P0.1.3",
+              "title": "GitHub Actions CI (lint, tsc, vitest, pgTAP, build)",
+              "status": "done",
+              "doc": "design/05-architecture.md",
+              "note": "Runs on first push"
+            }
+          ]
+        },
+        {
+          "id": "P0.2",
+          "name": "Infra",
+          "tasks": [
+            {
+              "id": "P0.2.1",
+              "title": "Supabase staging + prod projects, local stack",
+              "status": "in_progress",
+              "doc": "design/05-architecture.md",
+              "note": "Local stack done; hosted projects pending"
+            },
+            {
+              "id": "P0.2.2",
+              "title": "Vercel project, env vars, SPA rewrite",
+              "status": "todo",
+              "doc": "design/05-architecture.md"
+            }
+          ]
+        },
+        {
+          "id": "P0.3",
+          "name": "Auth & orgs",
+          "tasks": [
+            {
+              "id": "P0.3.1",
+              "title": "Email OTP login + AuthProvider",
+              "status": "done",
+              "doc": "design/03-auth-rls.md"
+            },
+            {
+              "id": "P0.3.2",
+              "title": "profiles, orgs, org_members + create_org RPC + RLS tests",
+              "status": "done",
+              "doc": "design/03-auth-rls.md",
+              "note": "13 pgTAP tests"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P1",
+      "name": "Producer MVP",
+      "goal": "A producer can run a real contest from paper sheets.",
+      "epics": [
+        {
+          "id": "P1.1",
+          "name": "Scoring engine",
+          "tasks": [
+            {
+              "id": "P1.1.1",
+              "title": "computeResults + 14 edge-case fixtures",
+              "status": "todo",
+              "doc": "design/02-scoring-engine.md"
+            },
+            {
+              "id": "P1.1.2",
+              "title": "Tiebreak step generation",
+              "status": "todo",
+              "doc": "design/02-scoring-engine.md"
+            }
+          ]
+        },
+        {
+          "id": "P1.2",
+          "name": "Structure",
+          "tasks": [
+            {
+              "id": "P1.2.1",
+              "title": "events/contests/categories/components schema + RLS",
+              "status": "todo",
+              "doc": "design/01-domain-model.md"
+            },
+            {
+              "id": "P1.2.2",
+              "title": "Rubric builder UI + settings",
+              "status": "todo",
+              "doc": "design/04-ux-flows.md"
+            },
+            {
+              "id": "P1.2.3",
+              "title": "Tiebreak builder UI",
+              "status": "todo",
+              "doc": "design/04-ux-flows.md"
+            },
+            {
+              "id": "P1.2.4",
+              "title": "Clone contest RPC + UI",
+              "status": "todo",
+              "doc": "design/01-domain-model.md"
+            }
+          ]
+        },
+        {
+          "id": "P1.3",
+          "name": "People",
+          "tasks": [
+            {
+              "id": "P1.3.1",
+              "title": "Contestants + contacts, judges (no login), recusal grid",
+              "status": "todo",
+              "doc": "design/04-ux-flows.md"
+            }
+          ]
+        },
+        {
+          "id": "P1.4",
+          "name": "Score entry",
+          "tasks": [
+            {
+              "id": "P1.4.1",
+              "title": "scores table, validation + lock triggers, score_audit",
+              "status": "todo",
+              "doc": "design/01-domain-model.md"
+            },
+            {
+              "id": "P1.4.2",
+              "title": "saveQueue + SyncPill",
+              "status": "todo",
+              "doc": "design/05-architecture.md"
+            },
+            {
+              "id": "P1.4.3",
+              "title": "Entry views: by judge sheet / category / contestant",
+              "status": "todo",
+              "doc": "design/04-ux-flows.md"
+            }
+          ]
+        },
+        {
+          "id": "P1.5",
+          "name": "Results",
+          "tasks": [
+            {
+              "id": "P1.5.1",
+              "title": "Standings, projected winner, threshold, tiebreak path",
+              "status": "todo",
+              "doc": "design/04-ux-flows.md"
+            },
+            {
+              "id": "P1.5.2",
+              "title": "Status transitions + finalize + manual tie winner",
+              "status": "todo",
+              "doc": "design/01-domain-model.md"
+            },
+            {
+              "id": "P1.5.3",
+              "title": "Printable tally sheet",
+              "status": "todo",
+              "doc": "design/04-ux-flows.md"
+            },
+            {
+              "id": "P1.5.4",
+              "title": "Playwright smoke: worked example end to end",
+              "status": "todo",
+              "doc": "design/02-scoring-engine.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "name": "Judges",
+      "goal": "Judges sign in and score and submit their own sheets.",
+      "epics": [
+        {
+          "id": "P2.1",
+          "name": "Onboarding",
+          "tasks": [
+            {
+              "id": "P2.1.1",
+              "title": "api/invite-judge.ts + claim_judge_seats RPC",
+              "status": "todo",
+              "doc": "design/03-auth-rls.md"
+            },
+            {
+              "id": "P2.1.2",
+              "title": "Tabulator role + member management",
+              "status": "todo",
+              "doc": "design/03-auth-rls.md"
+            },
+            {
+              "id": "P2.1.3",
+              "title": "Custom SMTP for auth email",
+              "status": "todo",
+              "doc": "design/03-auth-rls.md"
+            }
+          ]
+        },
+        {
+          "id": "P2.2",
+          "name": "Judge experience",
+          "tasks": [
+            {
+              "id": "P2.2.1",
+              "title": "Judge dashboard + mobile sheet entry",
+              "status": "todo",
+              "doc": "design/04-ux-flows.md"
+            },
+            {
+              "id": "P2.2.2",
+              "title": "Submit/lock, producer unlock with reason",
+              "status": "todo",
+              "doc": "design/01-domain-model.md"
+            },
+            {
+              "id": "P2.2.3",
+              "title": "Judge progress panel",
+              "status": "todo",
+              "doc": "design/04-ux-flows.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "name": "Results & feedback",
+      "goal": "Comments reach contestants, results go public, and templates can be shared.",
+      "epics": [
+        {
+          "id": "P3.1",
+          "name": "Comments",
+          "tasks": [
+            {
+              "id": "P3.1.1",
+              "title": "Judge comments + producer review/approve",
+              "status": "todo",
+              "doc": "design/04-ux-flows.md"
+            },
+            {
+              "id": "P3.1.2",
+              "title": "Per-contestant print/PDF + CSV export, anonymity",
+              "status": "todo",
+              "doc": "design/04-ux-flows.md"
+            }
+          ]
+        },
+        {
+          "id": "P3.2",
+          "name": "Publish",
+          "tasks": [
+            {
+              "id": "P3.2.1",
+              "title": "publish_contest RPC + published_results + public page",
+              "status": "todo",
+              "doc": "design/03-auth-rls.md"
+            }
+          ]
+        },
+        {
+          "id": "P3.3",
+          "name": "Templates",
+          "tasks": [
+            {
+              "id": "P3.3.1",
+              "title": "Save as / apply template (private, public)",
+              "status": "todo",
+              "doc": "design/01-domain-model.md"
+            },
+            {
+              "id": "P3.3.2",
+              "title": "Curated templates (platform admin)",
+              "status": "todo",
+              "doc": "design/01-domain-model.md"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

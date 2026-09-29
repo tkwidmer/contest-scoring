@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Colors are CSS variables remapped for dark mode (Inkborn convention: no `dark:` variants). */
+@theme {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-fg: var(--c-fg);
+  --color-muted: var(--c-muted);
+  --color-rule: var(--c-rule);
+  --color-accent: var(--c-accent);
+  --color-on-accent: var(--c-on-accent);
+  --color-danger: var(--c-danger);
+  --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+:root {
+  --c-bg: #f6f6f8; --c-surface: #ffffff; --c-fg: #16181f; --c-muted: #5d6272; --c-rule: #dcdee6;
+  --c-accent: #1f3a93; --c-on-accent: #ffffff; --c-danger: #b3202e;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-bg: #111318; --c-surface: #191c23; --c-fg: #e8e9ee; --c-muted: #9ba0b0; --c-rule: #2c3040;
+    --c-accent: #8ea6ff; --c-on-accent: #111318; --c-danger: #ff6b78;
+    color-scheme: dark;
+  }
+}
+
+body { @apply bg-bg text-fg font-sans antialiased; }

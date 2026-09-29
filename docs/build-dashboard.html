@@ -1,0 +1,143 @@
+<title>Contest Scoring Build</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: scoresheet-style ledger. Phase tally strip on top, then one ruled table per phase. */
+:root {
+  --bg: #f6f6f8; --surface: #ffffff; --fg: #16181f; --muted: #5d6272; --rule: #dcdee6;
+  --accent: #1f3a93;          /* leather-pride royal blue */
+  --done: #1d7a4a; --prog: #b26b00; --blocked: #b3202e; --todo: #7a7f8f;
+  --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111318; --surface: #191c23; --fg: #e8e9ee; --muted: #9ba0b0; --rule: #2c3040;
+  --accent: #8ea6ff; --done: #4fc98a; --prog: #f0a940; --blocked: #ff6b78; --todo: #8a8fa0; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111318; --surface: #191c23; --fg: #e8e9ee; --muted: #9ba0b0; --rule: #2c3040;
+  --accent: #8ea6ff; --done: #4fc98a; --prog: #f0a940; --blocked: #ff6b78; --todo: #8a8fa0; color-scheme: dark }
+
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
+main { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 28px; }
+h1, h2 { font-family: var(--display); letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); text-transform: uppercase; }
+h2 { font-size: 1.6rem; text-transform: uppercase; }
+.eyebrow { font: 500 .75rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+header { display: grid; gap: 10px; }
+.overall { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; color: var(--muted); }
+.overall b { font: 800 2rem var(--display); color: var(--fg); font-variant-numeric: tabular-nums; }
+.bar { height: 6px; background: var(--rule); border-radius: 3px; overflow: hidden; display: flex; }
+.bar span { display: block; height: 100%; }
+
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.phase-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px; display: grid; gap: 8px; text-decoration: none; color: inherit; }
+.phase-card:hover, .phase-card:focus-visible { border-color: var(--accent); outline: none; }
+.phase-card .id { font: 500 .8rem var(--mono); color: var(--accent); }
+.phase-card .name { font-weight: 600; }
+.phase-card .count { font: 500 .8rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { font: 500 .8rem var(--mono); border: 1px solid var(--rule); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+section.phase { display: grid; gap: 12px; }
+.phase-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; border-bottom: 2px solid var(--fg); padding-bottom: 6px; }
+.goal { color: var(--muted); max-width: 65ch; margin: 0; }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th.epic { font: 600 .78rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+td.tid { font: .8rem var(--mono); color: var(--muted); white-space: nowrap; width: 1%; }
+td.title { min-width: 0; }
+td.title small { display: block; color: var(--muted); }
+td.doc { white-space: nowrap; width: 1%; font: .8rem var(--mono); }
+a { color: var(--accent); }
+.pill { display: inline-flex; align-items: center; gap: 6px; font: 500 .75rem var(--mono); white-space: nowrap; }
+.pill::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.s-done { color: var(--done); } .s-in_progress { color: var(--prog); } .s-blocked { color: var(--blocked); } .s-todo { color: var(--todo); }
+.pill.s-todo::before { background: transparent; border: 1.5px solid currentColor; }
+.err { background: var(--surface); border: 1px solid var(--blocked); border-radius: 6px; padding: 16px; }
+code { font-family: var(--mono); }
+@media (max-width: 560px) { td.doc { display: none; } }
+@media (prefers-reduced-motion: no-preference) { .bar span { transition: width .4s ease; } }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">Build tracker · <span id="updated">loading</span></div>
+    <h1 id="project">Contest Scoring</h1>
+    <div class="overall"><b id="pct">–</b><span id="summary">Reading build-status.json…</span></div>
+    <div class="bar" id="overall-bar" aria-hidden="true"></div>
+  </header>
+  <nav class="strip" id="strip" aria-label="Phases"></nav>
+  <div class="filters" role="group" aria-label="Filter by status" id="filters"></div>
+  <div id="phases" style="display:grid;gap:32px"></div>
+</main>
+
+<script>
+const LABEL = { todo: 'To do', in_progress: 'In progress', blocked: 'Blocked', done: 'Done' };
+const ORDER = ['done', 'in_progress', 'blocked', 'todo'];
+const COLOR = { done: 'var(--done)', in_progress: 'var(--prog)', blocked: 'var(--blocked)', todo: 'var(--rule)' };
+let data, filter = 'all';
+try { filter = localStorage.getItem('csb-filter') || 'all'; } catch {}
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const tasksOf = p => p.epics.flatMap(e => e.tasks);
+const count = ts => Object.fromEntries(ORDER.map(s => [s, ts.filter(t => t.status === s).length]));
+const bar = c => { const n = Object.values(c).reduce((a, b) => a + b, 0) || 1;
+  return ORDER.map(s => `<span style="width:${c[s] / n * 100}%;background:${COLOR[s]}"></span>`).join(''); };
+
+function render() {
+  const all = data.phases.flatMap(tasksOf), c = count(all);
+  document.getElementById('project').textContent = data.project;
+  document.getElementById('updated').textContent = 'updated ' + data.updated;
+  document.getElementById('pct').textContent = Math.round(c.done / all.length * 100) + '%';
+  document.getElementById('summary').textContent =
+    `${c.done} of ${all.length} tasks done · ${c.in_progress} in progress · ${c.blocked} blocked`;
+  document.getElementById('overall-bar').innerHTML = bar(c);
+
+  document.getElementById('strip').innerHTML = data.phases.map(p => {
+    const ts = tasksOf(p), pc = count(ts);
+    return `<a class="phase-card" href="#${esc(p.id)}"><span class="id">${esc(p.id)}</span>
+      <span class="name">${esc(p.name)}</span><div class="bar">${bar(pc)}</div>
+      <span class="count">${pc.done}/${ts.length} done${pc.blocked ? ` · ${pc.blocked} blocked` : ''}</span></a>`;
+  }).join('');
+
+  document.getElementById('filters').innerHTML = ['all', ...ORDER].map(s =>
+    `<button class="chip" id="f-${s}" aria-pressed="${filter === s}" data-f="${s}">${s === 'all' ? 'All' : LABEL[s]} · ${s === 'all' ? all.length : c[s]}</button>`).join('');
+
+  document.getElementById('phases').innerHTML = data.phases.map(p => {
+    const rows = p.epics.map(e => {
+      const ts = e.tasks.filter(t => filter === 'all' || t.status === filter);
+      if (!ts.length) return '';
+      return `<tr><th class="epic" colspan="4">${esc(e.id)} · ${esc(e.name)}</th></tr>` + ts.map(t => `<tr>
+        <td class="tid">${esc(t.id)}</td>
+        <td class="title">${esc(t.title)}${t.note ? `<small>${esc(t.note)}</small>` : ''}</td>
+        <td><span class="pill s-${esc(t.status)}">${LABEL[t.status] || esc(t.status)}</span></td>
+        <td class="doc">${t.doc ? `<a href="${esc(t.doc)}">${esc(t.doc.replace('design/', ''))}</a>` : ''}</td></tr>`).join('');
+    }).join('');
+    if (!rows) return '';
+    return `<section class="phase" id="${esc(p.id)}"><div class="phase-head"><h2>${esc(p.id)} · ${esc(p.name)}</h2>
+      <span class="eyebrow">${count(tasksOf(p)).done}/${tasksOf(p).length} done</span></div>
+      <p class="goal">${esc(p.goal)}</p><div class="table-wrap"><table>${rows}</table></div></section>`;
+  }).join('') || '<p class="goal">No tasks match this filter.</p>';
+}
+
+document.getElementById('filters').addEventListener('click', e => {
+  const f = e.target.closest('[data-f]')?.dataset.f; if (!f) return;
+  filter = f; try { localStorage.setItem('csb-filter', f); } catch {}
+  render();
+});
+
+fetch('build-status.json', { cache: 'no-store' })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => { data = d; render(); })
+  .catch(() => {
+    document.getElementById('summary').textContent = '';
+    document.getElementById('phases').innerHTML = `<div class="err"><strong>Couldn't load build-status.json.</strong>
+      Browsers block reading files straight from disk. Serve the folder instead: <code>npx serve docs</code>, then open /build-dashboard.</div>`;
+  });
+</script>
