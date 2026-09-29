@@ -61,15 +61,53 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"contests": {
+                },"contestant_contacts": {
                   Row: {
-                    "aggregation": string,"anonymize_comments": boolean,"created_at": string,"event_id": string,"id": string,"manual_winner_reason": string | null,"name": string,"org_id": string,"status": string,"threshold_pct": number | null
+                    "contestant_id": string,"email": string
                   }
                   Insert: {
-                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id": string,"id"?: string,"manual_winner_reason"?: string | null,"name": string,"org_id": string,"status"?: string,"threshold_pct"?: number | null
+                    "contestant_id": string,"email": string
                   }
                   Update: {
-                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id"?: string,"id"?: string,"manual_winner_reason"?: string | null,"name"?: string,"org_id"?: string,"status"?: string,"threshold_pct"?: number | null
+                    "contestant_id"?: string,"email"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "contestant_contacts_contestant_id_fkey"
+      columns: ["contestant_id"]
+isOneToOne: true
+      referencedRelation: "contestants"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"contestants": {
+                  Row: {
+                    "contest_id": string,"created_at": string,"display_name": string,"id": string,"number": number | null,"represents": string | null,"sort": number,"withdrawn": boolean
+                  }
+                  Insert: {
+                    "contest_id": string,"created_at"?: string,"display_name": string,"id"?: string,"number"?: number | null,"represents"?: string | null,"sort"?: number,"withdrawn"?: boolean
+                  }
+                  Update: {
+                    "contest_id"?: string,"created_at"?: string,"display_name"?: string,"id"?: string,"number"?: number | null,"represents"?: string | null,"sort"?: number,"withdrawn"?: boolean
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "contestants_contest_id_fkey"
+      columns: ["contest_id"]
+isOneToOne: false
+      referencedRelation: "contests"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"contests": {
+                  Row: {
+                    "aggregation": string,"anonymize_comments": boolean,"created_at": string,"event_id": string,"id": string,"manual_winner_contestant_id": string | null,"manual_winner_reason": string | null,"name": string,"org_id": string,"status": string,"threshold_pct": number | null
+                  }
+                  Insert: {
+                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id": string,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name": string,"org_id": string,"status"?: string,"threshold_pct"?: number | null
+                  }
+                  Update: {
+                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id"?: string,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name"?: string,"org_id"?: string,"status"?: string,"threshold_pct"?: number | null
                   }
                   Relationships: [
                     {
@@ -77,6 +115,12 @@ isOneToOne: false
       columns: ["event_id"]
 isOneToOne: false
       referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "contests_manual_winner_contestant_id_fkey"
+      columns: ["manual_winner_contestant_id"]
+isOneToOne: false
+      referencedRelation: "contestants"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "contests_org_id_fkey"
@@ -102,6 +146,31 @@ isOneToOne: false
       columns: ["org_id"]
 isOneToOne: false
       referencedRelation: "orgs"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"judges": {
+                  Row: {
+                    "contest_id": string,"created_at": string,"email": string | null,"id": string,"name": string,"sort": number,"user_id": string | null
+                  }
+                  Insert: {
+                    "contest_id": string,"created_at"?: string,"email"?: string | null,"id"?: string,"name": string,"sort"?: number,"user_id"?: string | null
+                  }
+                  Update: {
+                    "contest_id"?: string,"created_at"?: string,"email"?: string | null,"id"?: string,"name"?: string,"sort"?: number,"user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "judges_contest_id_fkey"
+      columns: ["contest_id"]
+isOneToOne: false
+      referencedRelation: "contests"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "judges_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -155,6 +224,31 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"recusals": {
+                  Row: {
+                    "contestant_id": string,"judge_id": string,"reason": string | null
+                  }
+                  Insert: {
+                    "contestant_id": string,"judge_id": string,"reason"?: string | null
+                  }
+                  Update: {
+                    "contestant_id"?: string,"judge_id"?: string,"reason"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recusals_contestant_id_fkey"
+      columns: ["contestant_id"]
+isOneToOne: false
+      referencedRelation: "contestants"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "recusals_judge_id_fkey"
+      columns: ["judge_id"]
+isOneToOne: false
+      referencedRelation: "judges"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"tiebreak_steps": {
                   Row: {

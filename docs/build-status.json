@@ -167,7 +167,7 @@
               "title": "events/contests/categories/components schema + RLS",
               "status": "done",
               "doc": "design/01-domain-model.md",
-              "note": "24 pgTAP tests; applied to hosted. Follow-up: split \"for all\" write policies (advisor: multiple permissive SELECT policies)"
+              "note": "24 pgTAP tests; applied to hosted"
             },
             {
               "id": "P1.2.2",
@@ -198,8 +198,9 @@
             {
               "id": "P1.3.1",
               "title": "Contestants + contacts, judges (no login), recusal grid",
-              "status": "todo",
-              "doc": "design/04-ux-flows.md"
+              "status": "done",
+              "doc": "design/04-ux-flows.md",
+              "note": "People page + 24 pgTAP tests; judges can read their assigned contest"
             }
           ]
         },

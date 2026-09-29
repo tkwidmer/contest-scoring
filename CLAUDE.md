@@ -9,7 +9,7 @@ Personal project: scoring platform for leather/LGBT title contests. The design l
 |---|---|
 | `npm run db:start` | Local Supabase (needs Docker). Prints URL and keys. Mailpit inbox for sign-in codes: http://127.0.0.1:54324 |
 | `npm run dev` | Vite on :5173. Needs `.env.local` (copy `.env.example`) |
-| `npm run db:reset` | Re-apply migrations and seed |
+| `npm run db:reset` | Re-apply migrations and `supabase/seed.sql` (the worked example from design doc 02; sign in as `producer@test.dev`) |
 | `npm run db:test` | pgTAP RLS tests in `supabase/tests/` |
 | `npm run db:types` | Regenerate `src/lib/database.types.ts`. CI fails if it's stale |
 | `npm run lint` / `npm test` / `npm run build` | ESLint / Vitest / tsc + vite build |

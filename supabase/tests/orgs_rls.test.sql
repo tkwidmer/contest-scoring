@@ -6,7 +6,8 @@ insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'alice@test.dev'),
   ('22222222-2222-2222-2222-222222222222', 'bob@test.dev');
 
-select is((select count(*)::int from public.profiles), 2, 'profiles are created on signup');
+select is((select count(*)::int from public.profiles where id in ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')), 2,
+  'profiles are created on signup');
 
 -- ── Alice (creates an org) ──
 set local role authenticated;

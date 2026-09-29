@@ -50,10 +50,10 @@ erDiagram
 ### People
 | Table | Columns | Notes |
 |---|---|---|
-| `contestants` | `contest_id`, `display_name`, `number int null`, `represents text null` (e.g. "Mr Chicago Leather 2026"), `sort int`, `withdrawn bool default false` | No legal name, phone or address, ever. |
+| `contestants` | `contest_id`, `display_name`, `number int null`, `represents text null` (e.g. "Mr Chicago Leather 2026"), `sort int`, `withdrawn bool default false` | No legal name, phone or address, ever. unique(contest_id, number). Deletable only in draft; after that, withdraw instead. |
 | `contestant_contacts` | `contestant_id pk`, `email` | Split out so judges and tabulators can read contestants without seeing emails. |
-| `judges` | `contest_id`, `name`, `email null`, `user_id null`, `sort int` | `user_id` stays null in P1 (the producer enters for them). It's set when the judge claims the seat (P2). unique(contest_id, user_id). |
-| `recusals` | `judge_id`, `contestant_id`, `reason text null` | unique(judge_id, contestant_id). |
+| `judges` | `contest_id`, `name`, `email null`, `user_id null`, `sort int` | `user_id` stays null in P1 (the producer enters for them). It's set only by the claim RPC (P2); clients have no write privilege on it. unique(contest_id, user_id). Deletable only in draft. |
+| `recusals` | `judge_id`, `contestant_id`, `reason text null` | pk(judge_id, contestant_id). A trigger requires both to be in the same contest. |
 
 ### Scoring
 | Table | Columns | Notes |

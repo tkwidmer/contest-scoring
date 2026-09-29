@@ -9,6 +9,7 @@ import { Home } from './pages/Home'
 import { OrgHome } from './pages/OrgHome'
 import { EventHome } from './pages/EventHome'
 import { ContestSetup } from './pages/ContestSetup'
+import { ContestPeople } from './pages/ContestPeople'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/o/:orgId" element={<OrgHome />} />
             <Route path="/e/:eventId" element={<EventHome />} />
             <Route path="/c/:contestId/setup" element={<ContestSetup />} />
+            <Route path="/c/:contestId/people" element={<ContestPeople />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

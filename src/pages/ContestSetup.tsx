@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import type { PostgrestError } from '@supabase/supabase-js'
+import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
 import { generateTiebreakSteps } from '../lib/scoring'
-import { buttonQuiet, card, h1, h2, iconButton, input, label } from '../components/ui'
+import { useWrites } from '../lib/useWrites'
+import { ContestHeader } from '../components/ContestHeader'
+import { buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
 
 type Component = { id: string; name: string; min_points: number; max_points: number; step: number; sort: number }
 type Category = { id: string; name: string; sort: number; drop_rank: number | null; components: Component[] }
@@ -23,7 +24,6 @@ export function ContestSetup() {
   const [categories, setCategories] = useState<Category[]>([])
   const [steps, setSteps] = useState<Step[]>([])
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
     const [c, cats, st] = await Promise.all([
@@ -46,21 +46,7 @@ export function ContestSetup() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState runs after the awaits
   useEffect(() => { load() }, [load])
 
-  // Run one or more writes, surface the first error, then reload everything (rubrics are small).
-  async function run(...writes: PromiseLike<{ error: PostgrestError | null }>[]) {
-    setBusy(true)
-    const results = await Promise.all(writes)
-    const failed = results.find(r => r.error)?.error
-    setError(failed ? friendly(failed) : '')
-    await load()
-    setBusy(false)
-    return !failed
-  }
-
-  // Blur-to-save fields: if the database rejects the value, put the saved value back so the screen never lies.
-  const saveField = async (el: HTMLInputElement, saved: string | number | null, write: () => Promise<boolean>) => {
-    if (!(await write())) el.value = saved == null ? '' : String(saved)
-  }
+  const { busy, run, saveField } = useWrites(load, setError)
 
   if (!contest) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
@@ -98,9 +84,8 @@ export function ContestSetup() {
 
   const regenerateSteps = async () => {
     const generated = generateTiebreakSteps(categories.map(c => ({ id: c.id, dropRank: c.drop_rank })))
-    setBusy(true)
-    const del = await supabase.from('tiebreak_steps').delete().eq('contest_id', contest.id)
-    if (del.error) { setError(friendly(del.error)); setBusy(false); return }
+    // Delete first so the new step numbers don't collide with the old ones.
+    if (!(await run(supabase.from('tiebreak_steps').delete().eq('contest_id', contest.id)))) return
     await run(generated.length
       ? supabase.from('tiebreak_steps').insert(generated.map((ids, i) => ({ contest_id: contest.id, step_no: i + 1, category_ids: ids })))
       : Promise.resolve({ error: null }))
@@ -118,13 +103,7 @@ export function ContestSetup() {
 
   return (
     <div className="grid gap-10">
-      <div className="grid gap-1">
-        <Link to={`/e/${contest.event_id}`} className="text-sm text-accent">← {contest.events?.name}</Link>
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className={h1}>{contest.name}</h1>
-          <span className="font-mono text-sm text-muted">{contest.status}</span>
-        </div>
-      </div>
+      <ContestHeader contest={contest} />
 
       {locked && (
         <p className={`${card} px-4 py-3`}>
