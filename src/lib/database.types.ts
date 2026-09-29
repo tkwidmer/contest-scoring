@@ -101,13 +101,13 @@ isOneToOne: false
                   ]
                 },"contests": {
                   Row: {
-                    "aggregation": string,"anonymize_comments": boolean,"created_at": string,"event_id": string,"id": string,"manual_winner_contestant_id": string | null,"manual_winner_reason": string | null,"name": string,"org_id": string,"status": string,"threshold_pct": number | null
+                    "aggregation": string,"anonymize_comments": boolean,"created_at": string,"event_id": string,"final_result": Json | null,"finalized_at": string | null,"id": string,"manual_winner_contestant_id": string | null,"manual_winner_reason": string | null,"name": string,"org_id": string,"status": string,"threshold_pct": number | null
                   }
                   Insert: {
-                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id": string,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name": string,"org_id": string,"status"?: string,"threshold_pct"?: number | null
+                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id": string,"final_result"?: Json | null,"finalized_at"?: string | null,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name": string,"org_id": string,"status"?: string,"threshold_pct"?: number | null
                   }
                   Update: {
-                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id"?: string,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name"?: string,"org_id"?: string,"status"?: string,"threshold_pct"?: number | null
+                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id"?: string,"final_result"?: Json | null,"finalized_at"?: string | null,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name"?: string,"org_id"?: string,"status"?: string,"threshold_pct"?: number | null
                   }
                   Relationships: [
                     {
@@ -339,6 +339,9 @@ isOneToOne: false
           Functions: {
             "create_org":
 { Args: { "p_name": string }; Returns: string
+                           },
+"finalize_contest":
+{ Args: { "p_contest": string,"p_result": Json }; Returns: undefined
                            },
 "set_contest_status":
 { Args: { "p_contest": string,"p_status": string }; Returns: undefined

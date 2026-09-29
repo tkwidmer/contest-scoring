@@ -82,6 +82,14 @@ describe('computeResults', () => {
     expect(byId.B!.tiebreakPath).toEqual([{ step: 1, value: 93 }, { step: 2, value: 49.5 }])
     expect(byId.C!.tiebreakPath).toBeUndefined()
     expect(r.winner).toEqual({ kind: 'decided', contestantId: 'B' })
+    // B's Speech subtotals are J1 17, J2 17, J3 16, J4 16, J5 16.5 (backfilled): one 16 and one 17 are dropped.
+    expect(byId.B!.breakdown.Speech).toEqual([
+      { judgeId: 'J1', subtotal: 17, dropped: false, backfilled: false },
+      { judgeId: 'J2', subtotal: 17, dropped: true, backfilled: false },
+      { judgeId: 'J3', subtotal: 16, dropped: true, backfilled: false },
+      { judgeId: 'J4', subtotal: 16, dropped: false, backfilled: false },
+      { judgeId: 'J5', subtotal: 16.5, dropped: false, backfilled: true },
+    ])
   })
 
   it('3. leader below threshold → no_title', () => {
@@ -145,6 +153,7 @@ describe('computeResults', () => {
       scores: { A: { S: [null, null] } },
     }))
     expect(r.standings[0]!.completeness).toBe(0)
+    expect(r.standings[0]!.breakdown.S!.map(b => b.subtotal)).toEqual([null, null])
     expect(r.winner).toEqual({ kind: 'incomplete', projectedId: 'A' })
   })
 
@@ -158,6 +167,13 @@ describe('computeResults', () => {
     const a = r.standings.find(s => s.contestantId === 'A')!
     expect(a.completeness).toBeCloseTo(2 / 3)
     expect(a.pct).toBe(1)
+  })
+
+  it('10b. while others are incomplete, fully scored contestants still use tiebreaks for the projection', () => {
+    const spec = { ...worked, scores: { ...worked.scores, C: { ...worked.scores.C, Overall: [13, 12, null, 12, 13] } } }
+    const r = computeResults(build(spec))
+    expect(r.winner).toEqual({ kind: 'incomplete', projectedId: 'B' })
+    expect(r.standings.slice(0, 2).map(s => [s.contestantId, s.rank])).toEqual([['B', 1], ['A', 2]])
   })
 
   it('11. repeating backfill mean is rounded half-up to 0.01', () => {

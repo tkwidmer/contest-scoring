@@ -37,3 +37,27 @@ jobs:
         run: |
           supabase gen types typescript --local > /tmp/types.ts
           diff /tmp/types.ts src/lib/database.types.ts
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.118.0
+      - run: npm ci
+      # Auth, REST, Kong and Mailpit are all the test needs.
+      - run: supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta
+      - name: Point the app at the local stack
+        run: supabase status -o env | sed -n 's/^API_URL=/VITE_SUPABASE_URL=/p; s/^PUBLISHABLE_KEY=/VITE_SUPABASE_ANON_KEY=/p' > .env.local
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results

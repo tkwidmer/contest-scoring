@@ -13,6 +13,7 @@ Personal project: scoring platform for leather/LGBT title contests. The design l
 | `npm run db:test` | pgTAP RLS tests in `supabase/tests/` |
 | `npm run db:types` | Regenerate `src/lib/database.types.ts`. CI fails if it's stale |
 | `npm run lint` / `npm test` / `npm run build` | ESLint / Vitest / tsc + vite build |
+| `npm run test:e2e` | Playwright against the local stack + seed (worked example). Restores what it changes |
 
 ## Conventions
 - Stack: Vite + React 19 + React Router 7 + Tailwind 4 + supabase-js, TypeScript strict.

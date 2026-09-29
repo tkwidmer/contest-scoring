@@ -11,6 +11,7 @@ import { EventHome } from './pages/EventHome'
 import { ContestSetup } from './pages/ContestSetup'
 import { ContestPeople } from './pages/ContestPeople'
 import { ContestScores } from './pages/ContestScores'
+import { ContestStandings } from './pages/ContestStandings'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -25,6 +26,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/c/:contestId/setup" element={<ContestSetup />} />
             <Route path="/c/:contestId/people" element={<ContestPeople />} />
             <Route path="/c/:contestId/scores" element={<ContestScores />} />
+            <Route path="/c/:contestId/standings" element={<ContestStandings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

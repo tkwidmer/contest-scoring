@@ -25,6 +25,7 @@ type Result = {
     categoryTotals: Record<categoryId, number>
     completeness: number              // 0..1 of expected sheets
     tiebreakPath?: { step: number; value: number }[]
+    breakdown: Record<categoryId, { judgeId; subtotal: number | null; dropped: boolean; backfilled: boolean }[]>
   }[]
   winner:
     | { kind: 'decided'; contestantId }
@@ -50,7 +51,7 @@ All arithmetic is done in **integer hundredths** (A2), so 16.5 is stored as 1650
 5. **Total** = Σ category aggregates.
 6. **Max possible (A4)** = countedJudges × Σ over categories of Σ component max. countedJudges = J in `sum` mode and J − 2 in drop mode. **pct** = total / maxPossible.
 7. **Rank** by total, descending. Withdrawn contestants are excluded.
-8. **Tiebreak.** For each group tied on total, walk `tiebreakSteps` in order. At each step, re-sum the category aggregates for that step's categories only, and split the group by that value. A tie that survives the last step becomes `tie_unresolved`, unless `manualWinnerId` names one of the tied contestants.
+8. **Tiebreak.** For each group tied on total whose members are all fully scored, walk `tiebreakSteps` in order. At each step, re-sum the category aggregates for that step's categories only, and split the group by that value. A tie that survives the last step becomes `tie_unresolved`, unless `manualWinnerId` names one of the tied contestants.
 9. **Winner.**
    - If any expected sheet is missing, the result is `incomplete` with a projected leader (the rank-1 contestant on the scores entered so far, ranked by pct of max possible *for the sheets entered*, so an early leader isn't just whoever has the most sheets done).
    - Otherwise, if rank 1 is below `thresholdPoints` = maxPossible × thresholdPct / 100, the result is `no_title`.

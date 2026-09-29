@@ -42,7 +42,7 @@ erDiagram
 | Table | Columns | Notes |
 |---|---|---|
 | `events` | `org_id`, `name`, `starts_on date`, `venue text null` | |
-| `contests` | `event_id`, `org_id` (copied from the event by trigger, keeps RLS predicates cheap), `status` ∈ `draft`,`scoring`,`finalized`,`published`; `aggregation` ∈ `sum`,`drop_high_low`; `threshold_pct numeric(5,2) null` (null = no threshold); `anonymize_comments bool default true`; `manual_winner_reason text null` | `status` has no client write privilege; it changes only through RPCs. `aggregation` and `threshold_pct` lock with the rubric. `manual_winner_contestant_id` arrives with `contestants`. |
+| `contests` | `event_id`, `org_id` (copied from the event by trigger, keeps RLS predicates cheap), `status` ∈ `draft`,`scoring`,`finalized`,`published`; `aggregation` ∈ `sum`,`drop_high_low`; `threshold_pct numeric(5,2) null` (null = no threshold); `anonymize_comments bool default true`; `manual_winner_reason text null`; `final_result jsonb` and `finalized_at` (set only by `finalize_contest`) | `status` has no client write privilege; it changes only through RPCs. `aggregation` and `threshold_pct` lock with the rubric. `manual_winner_contestant_id` arrives with `contestants`. |
 | `categories` | `contest_id`, `name`, `sort int`, `drop_rank int null` | `drop_rank` 1 = dropped first in tiebreaks. Not unique; the UI rewrites all ranks together. Deleting a category prunes it from `tiebreak_steps`. |
 | `components` | `category_id`, `name`, `min_points numeric(6,2) default 0`, `max_points numeric(6,2)`, `step numeric(4,2) default 1`, `sort int`, `description text null` | CHECK `min_points >= 0`, `max_points > min_points`, `step > 0`, and the range is a whole number of steps. |
 | `tiebreak_steps` | `contest_id`, `step_no int`, `category_ids uuid[]` | pk(contest_id, step_no). Auto-generated from `drop_rank`, then editable. A trigger rejects categories from other contests. Locks with the rubric. |
@@ -73,7 +73,7 @@ erDiagram
 - **Clone a contest.** RPC `clone_contest(contest_id, target_event_id)` copies the contest settings, categories, components and tiebreak steps. It doesn't copy contestants, judges or scores. **Apply template** does the same from `rubric` jsonb, and **Save as template** does the reverse. All three produce copies, never live links.
 - **Status transitions** go through an RPC `set_contest_status(contest_id, status)`. Built so far: `draft → scoring` (needs a component, a contestant and a judge) and `scoring → draft` (only before any score exists). Planned:
   - `draft → scoring` locks the rubric. A trigger blocks category/component edits once status ≠ draft.
-  - `scoring → finalized` requires no missing scores (after recusals) and a winner that is either decided or manually chosen.
+  - `scoring → finalized` goes through `finalize_contest(contest_id, result)`: the browser sends the engine's result, the database checks the caller is a producer, no expected score is missing (recused cells excluded), and the outcome is a winner in this contest or no title, then freezes it in `final_result`.
   - `finalized → published` writes `published_results`.
-  - Producers can go back from `finalized → scoring`. That change is audited.
+  - Producers can reopen `finalized → scoring`, which discards `final_result`.
 - **Withdrawn contestant.** Kept for the record, excluded from standings.

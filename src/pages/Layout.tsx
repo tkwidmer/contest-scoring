@@ -9,7 +9,7 @@ export function Layout() {
   if (!session) return <Navigate to="/login" replace />
   return (
     <div className="min-h-dvh">
-      <header className="border-b border-rule bg-surface">
+      <header className="border-b border-rule bg-surface print:hidden">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <Link to="/" className="font-display text-2xl font-extrabold uppercase tracking-wide">Contest Scoring</Link>
           <div className="flex items-center gap-3 text-sm text-muted">

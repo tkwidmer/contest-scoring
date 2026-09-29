@@ -22,6 +22,8 @@ export type Standing = {
   pct: number
   categoryTotals: Record<string, number>
   completeness: number // 0..1 of expected score cells (recused cells count once backfilled)
+  // Per category, one entry per judge (input order). subtotal is null until all of that judge's components are in.
+  breakdown: Record<string, { judgeId: string; subtotal: number | null; dropped: boolean; backfilled: boolean }[]>
   tiebreakPath?: { step: number; value: number }[]
 }
 
@@ -44,6 +46,7 @@ type Row = {
   totalH: number
   pct: number
   catH: Record<string, number>
+  breakdown: Standing['breakdown']
   completeness: number
   complete: boolean
   path: { step: number; value: number }[]
@@ -98,14 +101,22 @@ export function computeResults(input: ScoringInput): Result {
     const complete = expected > 0 && filled === expected
 
     const catH: Record<string, number> = {}
+    const breakdown: Standing['breakdown'] = {}
     for (const cat of input.categories) {
       const subtotals = values.map(v => sum(cat.components.map(c => v.get(c.id) ?? 0)))
+      const dropped = new Set<number>()
       if (complete && aggregation === 'drop_high_low') {
-        const sorted = [...subtotals].sort((a, b) => a - b)
-        catH[cat.id] = sum(sorted.slice(1, -1)) // drop exactly one high and one low (A1)
-      } else {
-        catH[cat.id] = sum(subtotals)
+        // Drop exactly one high and one low (A1); among equal values the first judge in order is the one marked.
+        const order = subtotals.map((_, i) => i).sort((a, b) => subtotals[a]! - subtotals[b]! || a - b)
+        dropped.add(order[0]!).add(order[order.length - 1]!)
       }
+      catH[cat.id] = sum(subtotals.filter((_, i) => !dropped.has(i)))
+      breakdown[cat.id] = judges.map((j, i) => ({
+        judgeId: j,
+        subtotal: cat.components.every(c => values[i]!.has(c.id)) ? fromH(subtotals[i]!) : null,
+        dropped: dropped.has(i),
+        backfilled: recused.has(`${j}|${cid}`),
+      }))
     }
     const totalH = sum(Object.values(catH))
 
@@ -117,6 +128,7 @@ export function computeResults(input: ScoringInput): Result {
       totalH,
       pct: denomH ? totalH / denomH : 0,
       catH,
+      breakdown,
       completeness: expected ? filled / expected : 0,
       complete,
       path: [],
@@ -134,7 +146,8 @@ export function computeResults(input: ScoringInput): Result {
 
   const resolve = (group: Row[], stepIdx: number): Row[][] => {
     const step = input.tiebreakSteps[stepIdx]
-    if (group.length < 2 || !allComplete || !step) return [group]
+    // Tiebreaks need real category totals, so they only apply when everyone in the tied group is fully scored.
+    if (group.length < 2 || group.some(r => !r.complete) || !step) return [group]
     const value = (r: Row) => sum(step.map(catId => r.catH[catId] ?? 0))
     for (const r of group) r.path.push({ step: stepIdx + 1, value: fromH(value(r)) })
     return split(group, value).flatMap(g => resolve(g, stepIdx + 1))
@@ -173,6 +186,7 @@ export function computeResults(input: ScoringInput): Result {
       pct: r.pct,
       categoryTotals: Object.fromEntries(Object.entries(r.catH).map(([k, v]) => [k, fromH(v)])),
       completeness: r.completeness,
+      breakdown: r.breakdown,
       ...(r.path.length ? { tiebreakPath: r.path } : {}),
     })),
     winner,

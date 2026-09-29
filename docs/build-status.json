@@ -238,27 +238,30 @@
             {
               "id": "P1.5.1",
               "title": "Standings, projected winner, threshold, tiebreak path",
-              "status": "todo",
-              "doc": "design/04-ux-flows.md"
+              "status": "done",
+              "doc": "design/04-ux-flows.md",
+              "note": "Banner for all 4 outcomes, per-judge breakdown, judge progress"
             },
             {
               "id": "P1.5.2",
               "title": "Status transitions + finalize + manual tie winner",
-              "status": "in_progress",
+              "status": "done",
               "doc": "design/01-domain-model.md",
-              "note": "draft <-> scoring done; finalize + manual winner to go"
+              "note": "finalize_contest freezes the result; reopen; manual tie winner. 12 pgTAP tests"
             },
             {
               "id": "P1.5.3",
               "title": "Printable tally sheet",
-              "status": "todo",
-              "doc": "design/04-ux-flows.md"
+              "status": "done",
+              "doc": "design/04-ux-flows.md",
+              "note": "Print tally expands every breakdown; print view not yet checked on paper"
             },
             {
               "id": "P1.5.4",
               "title": "Playwright smoke: worked example end to end",
-              "status": "todo",
-              "doc": "design/02-scoring-engine.md"
+              "status": "done",
+              "doc": "design/02-scoring-engine.md",
+              "note": "Playwright, runs in CI against the seeded worked example"
             }
           ]
         }
