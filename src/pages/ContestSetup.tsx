@@ -105,11 +105,24 @@ export function ContestSetup() {
     <div className="grid gap-10">
       <ContestHeader contest={contest} />
 
-      {locked && (
-        <p className={`${card} px-4 py-3`}>
-          🔒 Scoring has started, so the rubric, scoring method and threshold are locked. You can still rename the contest.
+      <div className={`${card} flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
+        <p>
+          {contest.status === 'draft'
+            ? 'Draft: build the scoresheet and add people, then start scoring.'
+            : contest.status === 'scoring'
+              ? '🔒 Scoring has started, so the scoresheet, scoring method and threshold are locked. You can still rename the contest.'
+              : `🔒 This contest is ${contest.status}.`}
         </p>
-      )}
+        {contest.status === 'draft' && (
+          <button type="button" className={buttonQuiet} disabled={busy} onClick={() =>
+            window.confirm('Start scoring? The scoresheet, scoring method and threshold will be locked.') &&
+            run(supabase.rpc('set_contest_status', { p_contest: contest.id, p_status: 'scoring' }))}>Start scoring</button>
+        )}
+        {contest.status === 'scoring' && (
+          <button type="button" className={buttonQuiet} disabled={busy}
+            onClick={() => run(supabase.rpc('set_contest_status', { p_contest: contest.id, p_status: 'draft' }))}>Back to draft</button>
+        )}
+      </div>
       {error && <p role="alert" className="rounded border border-danger px-4 py-3 text-danger">{error}</p>}
 
       <fieldset disabled={busy} className="grid gap-10">

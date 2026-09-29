@@ -211,20 +211,23 @@
             {
               "id": "P1.4.1",
               "title": "scores table, validation + lock triggers, score_audit",
-              "status": "todo",
-              "doc": "design/01-domain-model.md"
+              "status": "done",
+              "doc": "design/01-domain-model.md",
+              "note": "25 pgTAP tests; set_contest_status covers draft <-> scoring"
             },
             {
               "id": "P1.4.2",
               "title": "saveQueue + SyncPill",
-              "status": "todo",
-              "doc": "design/05-architecture.md"
+              "status": "done",
+              "doc": "design/05-architecture.md",
+              "note": "6 Vitest cases; verified offline + reload in the browser"
             },
             {
               "id": "P1.4.3",
               "title": "Entry views: by judge sheet / category / contestant",
-              "status": "todo",
-              "doc": "design/04-ux-flows.md"
+              "status": "done",
+              "doc": "design/04-ux-flows.md",
+              "note": "Worked example entered through the UI (56 scores)"
             }
           ]
         },
@@ -241,8 +244,9 @@
             {
               "id": "P1.5.2",
               "title": "Status transitions + finalize + manual tie winner",
-              "status": "todo",
-              "doc": "design/01-domain-model.md"
+              "status": "in_progress",
+              "doc": "design/01-domain-model.md",
+              "note": "draft <-> scoring done; finalize + manual winner to go"
             },
             {
               "id": "P1.5.3",

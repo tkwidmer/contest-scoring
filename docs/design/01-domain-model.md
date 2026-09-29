@@ -58,9 +58,9 @@ erDiagram
 ### Scoring
 | Table | Columns | Notes |
 |---|---|---|
-| `scores` | `judge_id`, `contestant_id`, `component_id`, `value numeric(6,2)`, `entered_by uuid`, `updated_at` | **unique(judge_id, contestant_id, component_id)**. A trigger validates min ≤ value ≤ max and that `(value - min) % step = 0`, and rejects writes when the sheet is locked or the contest isn't in `scoring`. |
+| `scores` | `contest_id` (set by trigger), `judge_id`, `contestant_id`, `component_id`, `value numeric(6,2)`, `entered_by uuid` (set by trigger), `updated_at` | **unique(judge_id, contestant_id, component_id)**. A trigger requires all three to be in the same contest, the contest to be in `scoring`, the value to be in range and on a step, and the judge not to be recused. Sheet locking is added with `sheet_submissions` in P2. |
 | `sheet_submissions` | `judge_id`, `contestant_id`, `category_id`, `submitted_at`, `submitted_by`, `unlocked_at null`, `unlocked_by null`, `unlock_reason null` | A sheet is locked when `submitted_at` is set and `unlocked_at` is null. Re-submitting clears the unlock fields. |
-| `score_audit` | `score_id`, `judge_id`, `contestant_id`, `component_id`, `old_value`, `new_value`, `changed_by`, `changed_at`, `op` ∈ `insert`,`update`,`delete` | Written only by a trigger (security definer). No update or delete from anyone. |
+| `score_audit` | `score_id`, `contest_id`, `judge_id`, `contestant_id`, `component_id`, `old_value`, `new_value`, `changed_by`, `changed_at`, `op` ∈ `insert`,`update`,`delete` | Written only by a trigger (security definer); saves that don't change the value are skipped. Producers read it. Nobody can write, update or delete it. |
 | `comments` | `judge_id`, `contestant_id`, `category_id null`, `body text`, `edited_body text null`, `approved bool default false`, `updated_at` | Producers edit `edited_body`. Exports use `coalesce(edited_body, body)` where `approved`. |
 | `published_results` | `contest_id pk`, `snapshot jsonb`, `show_breakdown bool`, `published_at`, `published_by` | Frozen output of the scoring engine. The only scoring data anonymous users can read. |
 
@@ -71,7 +71,7 @@ erDiagram
 
 ## Key flows on the model
 - **Clone a contest.** RPC `clone_contest(contest_id, target_event_id)` copies the contest settings, categories, components and tiebreak steps. It doesn't copy contestants, judges or scores. **Apply template** does the same from `rubric` jsonb, and **Save as template** does the reverse. All three produce copies, never live links.
-- **Status transitions** go through an RPC `set_contest_status(contest_id, status)`:
+- **Status transitions** go through an RPC `set_contest_status(contest_id, status)`. Built so far: `draft → scoring` (needs a component, a contestant and a judge) and `scoring → draft` (only before any score exists). Planned:
   - `draft → scoring` locks the rubric. A trigger blocks category/component edits once status ≠ draft.
   - `scoring → finalized` requires no missing scores (after recusals) and a winner that is either decided or manually chosen.
   - `finalized → published` writes `published_results`.

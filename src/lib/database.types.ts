@@ -250,6 +250,68 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"score_audit": {
+                  Row: {
+                    "changed_at": string,"changed_by": string | null,"component_id": string,"contest_id": string,"contestant_id": string,"id": number,"judge_id": string,"new_value": number | null,"old_value": number | null,"op": string,"score_id": string
+                  }
+                  Insert: {
+                    "changed_at"?: string,"changed_by"?: string | null,"component_id": string,"contest_id": string,"contestant_id": string,"id"?: never,"judge_id": string,"new_value"?: number | null,"old_value"?: number | null,"op": string,"score_id": string
+                  }
+                  Update: {
+                    "changed_at"?: string,"changed_by"?: string | null,"component_id"?: string,"contest_id"?: string,"contestant_id"?: string,"id"?: never,"judge_id"?: string,"new_value"?: number | null,"old_value"?: number | null,"op"?: string,"score_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "score_audit_contest_id_fkey"
+      columns: ["contest_id"]
+isOneToOne: false
+      referencedRelation: "contests"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"scores": {
+                  Row: {
+                    "component_id": string,"contest_id": string,"contestant_id": string,"entered_by": string | null,"id": string,"judge_id": string,"updated_at": string,"value": number
+                  }
+                  Insert: {
+                    "component_id": string,"contest_id": string,"contestant_id": string,"entered_by"?: string | null,"id"?: string,"judge_id": string,"updated_at"?: string,"value": number
+                  }
+                  Update: {
+                    "component_id"?: string,"contest_id"?: string,"contestant_id"?: string,"entered_by"?: string | null,"id"?: string,"judge_id"?: string,"updated_at"?: string,"value"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "scores_component_id_fkey"
+      columns: ["component_id"]
+isOneToOne: false
+      referencedRelation: "components"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "scores_contest_id_fkey"
+      columns: ["contest_id"]
+isOneToOne: false
+      referencedRelation: "contests"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "scores_contestant_id_fkey"
+      columns: ["contestant_id"]
+isOneToOne: false
+      referencedRelation: "contestants"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "scores_entered_by_fkey"
+      columns: ["entered_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "scores_judge_id_fkey"
+      columns: ["judge_id"]
+isOneToOne: false
+      referencedRelation: "judges"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"tiebreak_steps": {
                   Row: {
                     "category_ids": (string)[],"contest_id": string,"step_no": number
@@ -277,6 +339,9 @@ isOneToOne: false
           Functions: {
             "create_org":
 { Args: { "p_name": string }; Returns: string
+                           },
+"set_contest_status":
+{ Args: { "p_contest": string,"p_status": string }; Returns: undefined
                            }
           }
           Enums: {

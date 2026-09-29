@@ -6,6 +6,7 @@ type Props = { contest: { id: string; name: string; status: string; event_id: st
 const tabs = [
   { to: 'setup', label: 'Setup' },
   { to: 'people', label: 'People' },
+  { to: 'scores', label: 'Scores' },
 ]
 
 export function ContestHeader({ contest }: Props) {
