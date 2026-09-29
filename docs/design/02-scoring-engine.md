@@ -2,14 +2,21 @@
 
 A pure TypeScript module at `src/lib/scoring/` with no I/O and no Supabase import. The browser runs it for live standings. **Publish** runs the same code and freezes its output into `published_results.snapshot`. It's the most important code in the app, so every rule below is backed by a Vitest fixture.
 
+## Rounds
+`computeContest(input, rounds)` wraps `computeResults`. Without rounds it is one call. With rounds:
+- **Prelims** run on prelim categories only, with the prelim aggregation, no threshold and no manual winner.
+- **Cut**: contestants ranked within the top N (after tiebreak steps) are certain; a tied group straddling the line needs the producer's pick for the remaining slots. The proposal is only made once every prelim score is in; the database stores the confirmed finalists.
+- **Finals** run on final categories only (IML) or all categories (IMBB, `carryPrelim`), with only the confirmed finalists, the contest's threshold and manual winner.
+- Tiebreak steps may name categories from both rounds; categories absent from a round contribute nothing.
+
 ## Interface
 
 ```ts
 type Input = {
-  aggregation: 'sum' | 'drop_high_low'
+  aggregation: 'sum' | 'drop_high_low' | 'drop_high_low_total'
   thresholdPct: number | null
   categories: { id; name; components: { id; min; max; step }[] }[]
-  tiebreakSteps: string[][]          // ordered lists of category ids
+  tiebreakSteps: { categoryIds: string[]; allJudges: boolean }[]  // allJudges adds the dropped high and low back
   judges: { id }[]
   contestants: { id; withdrawn: boolean }[]
   recusals: { judgeId; contestantId }[]

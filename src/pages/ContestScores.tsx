@@ -8,9 +8,9 @@ import { ContestHeader } from '../components/ContestHeader'
 import { card, h2, iconButton, input } from '../components/ui'
 
 type Component = { id: string; name: string; min_points: number; max_points: number; step: number }
-type Category = { id: string; name: string; components: Component[] }
+type Category = { id: string; name: string; round: string; components: Component[] }
 type Person = { id: string; name: string }
-type Contest = { id: string; name: string; status: string; event_id: string; events: { name: string } | null }
+type Contest = { id: string; name: string; status: string; event_id: string; events: { name: string } | null; finalist_count: number | null }
 type View = 'sheet' | 'category' | 'contestant'
 
 const fmt = (n: number) => Number(n.toFixed(2)).toString()
@@ -43,6 +43,7 @@ export function ContestScores() {
   const [contestants, setContestants] = useState<Person[]>([])
   const [judges, setJudges] = useState<Person[]>([])
   const [recused, setRecused] = useState<Set<string>>(new Set())
+  const [finalists, setFinalists] = useState<Set<string>>(new Set())
   const [values, setValues] = useState<Map<string, number | null>>(new Map())
   const [error, setError] = useState('')
   const [view, setView] = useState<View>('sheet')
@@ -54,10 +55,10 @@ export function ContestScores() {
 
   const load = useCallback(async () => {
     const [c, cats, cs, js, rs, sc] = await Promise.all([
-      supabase.from('contests').select('id, name, status, event_id, events(name)').eq('id', contestId).maybeSingle(),
-      supabase.from('categories').select('id, name, components(id, name, min_points, max_points, step)')
+      supabase.from('contests').select('id, name, status, event_id, events(name), finalist_count').eq('id', contestId).maybeSingle(),
+      supabase.from('categories').select('id, name, round, components(id, name, min_points, max_points, step)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
-      supabase.from('contestants').select('id, display_name, number').eq('contest_id', contestId).eq('withdrawn', false).order('sort'),
+      supabase.from('contestants').select('id, display_name, number, finalist').eq('contest_id', contestId).eq('withdrawn', false).order('sort'),
       supabase.from('judges').select('id, name').eq('contest_id', contestId).order('sort'),
       supabase.from('recusals').select('judge_id, contestant_id, judges!inner(contest_id)').eq('judges.contest_id', contestId),
       supabase.from('scores').select('judge_id, contestant_id, component_id, value').eq('contest_id', contestId),
@@ -69,6 +70,7 @@ export function ContestScores() {
     setCategories(cats.data ?? [])
     setContestants((cs.data ?? []).map(x => ({ id: x.id, name: x.number != null ? `${x.number} · ${x.display_name}` : x.display_name })))
     setJudges(js.data ?? [])
+    setFinalists(new Set((cs.data ?? []).filter(x => x.finalist).map(x => x.id)))
     setRecused(new Set((rs.data ?? []).map(r => `${r.judge_id}|${r.contestant_id}`)))
     // Unsaved local edits win over what the server has.
     setValues(new Map([...(sc.data ?? []).map(s => [cellKey(s), s.value] as const), ...queue.pendingValues()]))
@@ -93,6 +95,9 @@ export function ContestScores() {
   if (!contest) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
   const editable = contest.status === 'scoring'
+  const rounds = contest.finalist_count != null
+  const finalsOnly = (cat: Category) => rounds && cat.round === 'final'
+  const catOf = new Map(categories.flatMap(c => c.components.map(k => [k.id, c] as const)))
   const components = categories.flatMap(c => c.components)
   const commit = (cell: Cell) => {
     setValues(v => new Map(v).set(cellKey(cell), cell.value))
@@ -102,6 +107,7 @@ export function ContestScores() {
     const key = cellKey({ judge_id, contestant_id, component_id: k.id })
     return {
       k, label, editable, recused: recused.has(`${judge_id}|${contestant_id}`),
+      notFinalist: finalsOnly(catOf.get(k.id)!) && !finalists.has(contestant_id),
       value: values.get(key) ?? null, serverError: sync.failing.get(key),
       onCommit: (value: number | null) => commit({ judge_id, contestant_id, component_id: k.id, value }),
     }
@@ -176,7 +182,11 @@ export function ContestScores() {
         const multi = cat.components.length > 1
         return (
           <section className="grid gap-3">
-            <Picker label="Category" value={cat.id} onChange={setCategoryId} options={categories} />
+            <Picker label="Category" value={cat.id} onChange={setCategoryId}
+              options={categories.map(c => ({ id: c.id, name: finalsOnly(c) ? `${c.name} (finals)` : rounds ? `${c.name} (prelims)` : c.name }))} />
+            {finalsOnly(cat) && finalists.size === 0 && (
+              <p className="text-sm text-muted">Finals scores open once the finalists are confirmed on the Standings tab.</p>
+            )}
             <div className={`${card} overflow-x-auto`}>
               <table className="text-sm">
                 <thead>
@@ -191,7 +201,7 @@ export function ContestScores() {
                   )}
                 </thead>
                 <tbody>
-                  {contestants.map(c => (
+                  {contestants.filter(c => !finalsOnly(cat) || finalists.has(c.id)).map(c => (
                     <tr key={c.id} className="border-b border-rule last:border-0">
                       <th scope="row" className="whitespace-nowrap px-3 py-1 text-left font-normal">{c.name}</th>
                       {judges.map(j => cat.components.map((k, i) => (
@@ -269,12 +279,13 @@ function Picker({ label, value, onChange, options, stepper }: { label: string; v
 }
 
 type CellProps = {
-  k: Component; label: string; editable: boolean; recused: boolean; value: number | null
+  k: Component; label: string; editable: boolean; recused: boolean; notFinalist: boolean; value: number | null
   serverError?: string; onCommit: (v: number | null) => void
 }
 
-function ScoreCell({ k, label, editable, recused, value, serverError, onCommit }: CellProps) {
+function ScoreCell({ k, label, editable, recused, notFinalist, value, serverError, onCommit }: CellProps) {
   const [local, setLocal] = useState<string | null>(null) // text being typed, or null when showing the saved value
+  if (notFinalist) return <span className="block text-center text-muted" title="Finals are scored for finalists only">–</span>
   if (recused) return <span className="block text-center font-mono text-muted" title="Recused: filled with the other judges' average">R</span>
 
   const text = local ?? (value == null ? '' : fmt(value))

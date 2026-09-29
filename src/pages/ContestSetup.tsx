@@ -8,11 +8,12 @@ import { ContestHeader } from '../components/ContestHeader'
 import { buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
 
 type Component = { id: string; name: string; min_points: number; max_points: number; step: number; sort: number }
-type Category = { id: string; name: string; sort: number; drop_rank: number | null; components: Component[] }
-type Step = { step_no: number; category_ids: string[] }
+type Category = { id: string; name: string; sort: number; drop_rank: number | null; round: string; components: Component[] }
+type Step = { step_no: number; category_ids: string[]; all_judges: boolean }
 type Contest = {
   id: string; name: string; status: string; aggregation: string; threshold_pct: number | null
   anonymize_comments: boolean; event_id: string; events: { name: string } | null
+  finalist_count: number | null; prelim_aggregation: string; prelim_carries: boolean
 }
 
 const num = (s: string) => (s.trim() === '' ? null : Number(s))
@@ -29,12 +30,12 @@ export function ContestSetup() {
   const load = useCallback(async () => {
     const [c, cats, st] = await Promise.all([
       supabase.from('contests')
-        .select('id, name, status, aggregation, threshold_pct, anonymize_comments, event_id, events(name)')
+        .select('id, name, status, aggregation, threshold_pct, anonymize_comments, event_id, events(name), finalist_count, prelim_aggregation, prelim_carries')
         .eq('id', contestId).maybeSingle(),
       supabase.from('categories')
-        .select('id, name, sort, drop_rank, components(id, name, min_points, max_points, step, sort)')
+        .select('id, name, sort, drop_rank, round, components(id, name, min_points, max_points, step, sort)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
-      supabase.from('tiebreak_steps').select('step_no, category_ids').eq('contest_id', contestId).order('step_no'),
+      supabase.from('tiebreak_steps').select('step_no, category_ids, all_judges').eq('contest_id', contestId).order('step_no'),
     ])
     const failed = c.error ?? cats.error ?? st.error
     if (failed) return setError(friendly(failed))
@@ -52,13 +53,16 @@ export function ContestSetup() {
   if (!contest) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
   const locked = contest.status !== 'draft'
-  const perJudgeMax = categories.reduce((s, c) => s + c.components.reduce((t, k) => t + k.max_points, 0), 0)
+  const rounds = contest.finalist_count != null
+  const catMax = (c: Category) => c.components.reduce((t, k) => t + k.max_points, 0)
+  const perJudgeMax = categories.reduce((s, c) => s + catMax(c), 0)
+  const prelimMax = categories.filter(c => c.round === 'prelim').reduce((s, c) => s + catMax(c), 0)
   const dropOrder = [...categories].sort((a, b) => (a.drop_rank ?? Infinity) - (b.drop_rank ?? Infinity))
   const catName = new Map(categories.map(c => [c.id, c.name]))
 
-  const updateContest = (patch: Partial<Pick<Contest, 'name' | 'aggregation' | 'threshold_pct' | 'anonymize_comments'>>) =>
+  const updateContest = (patch: Partial<Pick<Contest, 'name' | 'aggregation' | 'threshold_pct' | 'anonymize_comments' | 'finalist_count' | 'prelim_aggregation' | 'prelim_carries'>>) =>
     run(supabase.from('contests').update(patch).eq('id', contest.id))
-  const updateCategory = (id: string, patch: Partial<Pick<Category, 'name'>>) => run(supabase.from('categories').update(patch).eq('id', id))
+  const updateCategory = (id: string, patch: Partial<Pick<Category, 'name' | 'round'>>) => run(supabase.from('categories').update(patch).eq('id', id))
   const updateComponent = (id: string, patch: Partial<Component>) => run(supabase.from('components').update(patch).eq('id', id))
 
   const addCategory = () => run(supabase.from('categories').insert({
@@ -137,11 +141,12 @@ export function ContestSetup() {
                 onBlur={e => e.target.value.trim() && e.target.value !== contest.name && saveField(e.target, contest.name, () => updateContest({ name: e.target.value.trim() }))} />
             </div>
             <div className="grid gap-1">
-              <label htmlFor="c-agg" className={label}>Combining judges' scores</label>
+              <label htmlFor="c-agg" className={label}>{rounds ? "Finals: combining judges' scores" : "Combining judges' scores"}</label>
               <select id="c-agg" value={contest.aggregation} disabled={locked} className={input}
                 onChange={e => updateContest({ aggregation: e.target.value })}>
                 <option value="sum">Add up every judge</option>
-                <option value="drop_high_low">Drop each category's highest and lowest judge (needs 5+ judges)</option>
+                <option value="drop_high_low">Drop each category's highest and lowest judge (5+ judges)</option>
+                <option value="drop_high_low_total">Drop the judges with the highest and lowest overall totals (5+ judges)</option>
               </select>
             </div>
             <div className="grid gap-1">
@@ -156,6 +161,32 @@ export function ContestSetup() {
               </p>
             </div>
             <label className="flex items-center gap-2 self-center">
+              <input type="checkbox" checked={rounds} disabled={locked}
+                onChange={e => updateContest({ finalist_count: e.target.checked ? 5 : null })} />
+              <span>Preliminaries, then finals for the top contestants</span>
+            </label>
+            {rounds && <>
+              <div className="grid gap-1">
+                <label htmlFor="c-finalists" className={label}>Finalists (top N after prelims)</label>
+                <input id="c-finalists" key={String(contest.finalist_count)} type="number" min={1} defaultValue={contest.finalist_count ?? ''} disabled={locked} className={input}
+                  onBlur={e => { const v = num(e.target.value); if (v && v !== contest.finalist_count) saveField(e.target, contest.finalist_count, () => updateContest({ finalist_count: v })) }} />
+              </div>
+              <div className="grid gap-1">
+                <label htmlFor="c-prelim-agg" className={label}>Prelims: combining judges' scores</label>
+                <select id="c-prelim-agg" value={contest.prelim_aggregation} disabled={locked} className={input}
+                  onChange={e => updateContest({ prelim_aggregation: e.target.value })}>
+                  <option value="sum">Add up every judge</option>
+                <option value="drop_high_low">Drop each category's highest and lowest judge (5+ judges)</option>
+                <option value="drop_high_low_total">Drop the judges with the highest and lowest overall totals (5+ judges)</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 self-center">
+                <input type="checkbox" checked={contest.prelim_carries} disabled={locked}
+                  onChange={e => updateContest({ prelim_carries: e.target.checked })} />
+                <span>Prelim scores count toward the finals (IMBB). Leave off to start the finals fresh (IML).</span>
+              </label>
+            </>}
+            <label className="flex items-center gap-2 self-center">
               <input type="checkbox" checked={contest.anonymize_comments}
                 onChange={e => updateContest({ anonymize_comments: e.target.checked })} />
               <span>Hide judges' names on feedback sent to contestants</span>
@@ -167,7 +198,11 @@ export function ContestSetup() {
         <section className="grid gap-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className={h2}>Scoresheet</h2>
-            <p className="font-mono text-sm">Max per judge: <strong>{fmt(perJudgeMax)}</strong> pts</p>
+            <p className="font-mono text-sm">
+              {rounds
+                ? <>Prelims <strong>{fmt(prelimMax)}</strong> · Finals <strong>{fmt(contest.prelim_carries ? perJudgeMax : perJudgeMax - prelimMax)}</strong> pts per judge</>
+                : <>Max per judge: <strong>{fmt(perJudgeMax)}</strong> pts</>}
+            </p>
           </div>
           {categories.length === 0 && <p className="text-muted">Add the categories judges score, like Speech, Interview or Fantasy.</p>}
           {categories.map((c, i) => (
@@ -176,7 +211,14 @@ export function ContestSetup() {
                 <input aria-label="Category name" key={c.name} defaultValue={c.name} maxLength={120} disabled={locked}
                   className={`${input} flex-1 font-semibold`}
                   onBlur={e => e.target.value.trim() && e.target.value !== c.name && saveField(e.target, c.name, () => updateCategory(c.id, { name: e.target.value.trim() }))} />
-                <span className="font-mono text-sm text-muted">{fmt(c.components.reduce((s, k) => s + k.max_points, 0))} pts</span>
+                {rounds && (
+                  <select aria-label={`${c.name} round`} value={c.round} disabled={locked} className={`${input} w-auto py-1 text-sm`}
+                    onChange={e => run(supabase.from('categories').update({ round: e.target.value }).eq('id', c.id))}>
+                    <option value="prelim">Prelims</option>
+                    <option value="final">Finals</option>
+                  </select>
+                )}
+                <span className="font-mono text-sm text-muted">{fmt(catMax(c))} pts</span>
                 {!locked && <>
                   <button type="button" className={iconButton} aria-label={`Move ${c.name} up`} disabled={i === 0}
                     onClick={() => reorder(categories, i, i - 1, 'sort')}>↑</button>
@@ -254,6 +296,11 @@ export function ContestSetup() {
               {steps.map((s, i) => (
                 <div key={s.step_no} className={`${card} flex flex-wrap items-center gap-2 px-3 py-2`}>
                   <span className="w-14 font-mono text-xs text-muted">Step {i + 1}</span>
+                  <label className="flex items-center gap-1 text-xs text-muted" title="Add the dropped highest and lowest scores back in for this step">
+                    <input type="checkbox" checked={s.all_judges} disabled={locked}
+                      onChange={e => run(supabase.from('tiebreak_steps').update({ all_judges: e.target.checked }).eq('contest_id', contest.id).eq('step_no', s.step_no))} />
+                    every judge
+                  </label>
                   {categories.map(c => {
                     const on = s.category_ids.includes(c.id)
                     return (

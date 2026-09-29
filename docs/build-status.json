@@ -265,6 +265,43 @@
               "note": "Playwright, runs in CI against the seeded worked example"
             }
           ]
+        },
+        {
+          "id": "P1.6",
+          "name": "Rounds & official templates",
+          "tasks": [
+            {
+              "id": "P1.6.1",
+              "title": "Prelims → finals with a top-N cut (carry-over optional)",
+              "status": "done",
+              "doc": "design/02-scoring-engine.md",
+              "note": "Verified with an IMBB rehearsal: tie at 5th, producer pick, finals Speech"
+            },
+            {
+              "id": "P1.6.2",
+              "title": "Drop high/low by judge total (IML finals)",
+              "status": "done",
+              "doc": "design/02-scoring-engine.md"
+            },
+            {
+              "id": "P1.6.3",
+              "title": "Tiebreak steps that count every judge",
+              "status": "done",
+              "doc": "design/02-scoring-engine.md"
+            },
+            {
+              "id": "P1.6.4",
+              "title": "Official templates: IML, IMBB, IMsL 2023, IMsBB 2023",
+              "status": "done",
+              "doc": "design/01-domain-model.md"
+            },
+            {
+              "id": "P1.6.5",
+              "title": "Rehearsal with a real past scoresheet",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            }
+          ]
         }
       ]
     },
@@ -373,9 +410,9 @@
             {
               "id": "P3.3.2",
               "title": "Curated templates (platform admin)",
-              "status": "in_progress",
+              "status": "done",
               "doc": "design/01-domain-model.md",
-              "note": "Curated templates supported; IML and IMBB rubrics to load"
+              "note": "Four official templates loaded; tkwidmer@gmail.com is platform admin"
             }
           ]
         }

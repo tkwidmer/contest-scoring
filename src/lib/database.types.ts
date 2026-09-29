@@ -25,13 +25,13 @@ export type Database = {
           Tables: {
             "categories": {
                   Row: {
-                    "contest_id": string,"created_at": string,"drop_rank": number | null,"id": string,"name": string,"sort": number
+                    "contest_id": string,"created_at": string,"drop_rank": number | null,"id": string,"name": string,"round": string,"sort": number
                   }
                   Insert: {
-                    "contest_id": string,"created_at"?: string,"drop_rank"?: number | null,"id"?: string,"name": string,"sort"?: number
+                    "contest_id": string,"created_at"?: string,"drop_rank"?: number | null,"id"?: string,"name": string,"round"?: string,"sort"?: number
                   }
                   Update: {
-                    "contest_id"?: string,"created_at"?: string,"drop_rank"?: number | null,"id"?: string,"name"?: string,"sort"?: number
+                    "contest_id"?: string,"created_at"?: string,"drop_rank"?: number | null,"id"?: string,"name"?: string,"round"?: string,"sort"?: number
                   }
                   Relationships: [
                     {
@@ -82,13 +82,13 @@ isOneToOne: true
                   ]
                 },"contestants": {
                   Row: {
-                    "contest_id": string,"created_at": string,"display_name": string,"id": string,"number": number | null,"represents": string | null,"sort": number,"withdrawn": boolean
+                    "contest_id": string,"created_at": string,"display_name": string,"finalist": boolean,"id": string,"number": number | null,"represents": string | null,"sort": number,"withdrawn": boolean
                   }
                   Insert: {
-                    "contest_id": string,"created_at"?: string,"display_name": string,"id"?: string,"number"?: number | null,"represents"?: string | null,"sort"?: number,"withdrawn"?: boolean
+                    "contest_id": string,"created_at"?: string,"display_name": string,"finalist"?: boolean,"id"?: string,"number"?: number | null,"represents"?: string | null,"sort"?: number,"withdrawn"?: boolean
                   }
                   Update: {
-                    "contest_id"?: string,"created_at"?: string,"display_name"?: string,"id"?: string,"number"?: number | null,"represents"?: string | null,"sort"?: number,"withdrawn"?: boolean
+                    "contest_id"?: string,"created_at"?: string,"display_name"?: string,"finalist"?: boolean,"id"?: string,"number"?: number | null,"represents"?: string | null,"sort"?: number,"withdrawn"?: boolean
                   }
                   Relationships: [
                     {
@@ -101,13 +101,13 @@ isOneToOne: false
                   ]
                 },"contests": {
                   Row: {
-                    "aggregation": string,"anonymize_comments": boolean,"created_at": string,"event_id": string,"final_result": Json | null,"finalized_at": string | null,"id": string,"manual_winner_contestant_id": string | null,"manual_winner_reason": string | null,"name": string,"org_id": string,"status": string,"threshold_pct": number | null
+                    "aggregation": string,"anonymize_comments": boolean,"created_at": string,"event_id": string,"final_result": Json | null,"finalist_count": number | null,"finalists_confirmed_at": string | null,"finalized_at": string | null,"id": string,"manual_winner_contestant_id": string | null,"manual_winner_reason": string | null,"name": string,"org_id": string,"prelim_aggregation": string,"prelim_carries": boolean,"status": string,"threshold_pct": number | null
                   }
                   Insert: {
-                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id": string,"final_result"?: Json | null,"finalized_at"?: string | null,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name": string,"org_id": string,"status"?: string,"threshold_pct"?: number | null
+                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id": string,"final_result"?: Json | null,"finalist_count"?: number | null,"finalists_confirmed_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name": string,"org_id": string,"prelim_aggregation"?: string,"prelim_carries"?: boolean,"status"?: string,"threshold_pct"?: number | null
                   }
                   Update: {
-                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id"?: string,"final_result"?: Json | null,"finalized_at"?: string | null,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name"?: string,"org_id"?: string,"status"?: string,"threshold_pct"?: number | null
+                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id"?: string,"final_result"?: Json | null,"finalist_count"?: number | null,"finalists_confirmed_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name"?: string,"org_id"?: string,"prelim_aggregation"?: string,"prelim_carries"?: boolean,"status"?: string,"threshold_pct"?: number | null
                   }
                   Relationships: [
                     {
@@ -339,13 +339,13 @@ isOneToOne: false
                   ]
                 },"tiebreak_steps": {
                   Row: {
-                    "category_ids": (string)[],"contest_id": string,"step_no": number
+                    "all_judges": boolean,"category_ids": (string)[],"contest_id": string,"step_no": number
                   }
                   Insert: {
-                    "category_ids": (string)[],"contest_id": string,"step_no": number
+                    "all_judges"?: boolean,"category_ids": (string)[],"contest_id": string,"step_no": number
                   }
                   Update: {
-                    "category_ids"?: (string)[],"contest_id"?: string,"step_no"?: number
+                    "all_judges"?: boolean,"category_ids"?: (string)[],"contest_id"?: string,"step_no"?: number
                   }
                   Relationships: [
                     {
@@ -364,6 +364,9 @@ isOneToOne: false
           Functions: {
             "clone_contest":
 { Args: { "p_event": string,"p_name": string,"p_source": string }; Returns: string
+                           },
+"confirm_finalists":
+{ Args: { "p_contest": string,"p_finalists": (string)[] }; Returns: undefined
                            },
 "create_contest_from_template":
 { Args: { "p_event": string,"p_name": string,"p_template": string }; Returns: string

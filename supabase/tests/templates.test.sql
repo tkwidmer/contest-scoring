@@ -63,7 +63,7 @@ select set_config('request.jwt.claims', '{"sub":"22222222-2222-2222-2222-2222222
 select set_config('test.bob_org', public.create_org('Bob Leather')::text, true);
 insert into public.events (org_id, name) values (current_setting('test.bob_org')::uuid, 'Bob 2027');
 select set_config('test.bob_event', (select id::text from public.events where name = 'Bob 2027'), true);
-select is((select count(*)::int from public.templates), 0, 'other orgs cannot see a private template');
+select is((select count(*)::int from public.templates where visibility <> 'curated'), 0, 'other orgs cannot see a private template');
 select throws_ok($$ select public.create_contest_from_template(current_setting('test.tpl')::uuid, current_setting('test.bob_event')::uuid, 'Stolen') $$,
   'P0001', 'Template not found', 'other orgs cannot use a private template');
 select throws_ok($$ select public.clone_contest(current_setting('test.src')::uuid, current_setting('test.bob_event')::uuid, 'Stolen') $$,
@@ -71,12 +71,12 @@ select throws_ok($$ select public.clone_contest(current_setting('test.src')::uui
 
 -- Alice makes it public; now Bob can use it but not edit it.
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
-update public.templates set visibility = 'public';
+update public.templates set visibility = 'public' where org_id is not null;
 select set_config('request.jwt.claims', '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
 select lives_ok($$ select public.create_contest_from_template(current_setting('test.tpl')::uuid, current_setting('test.bob_event')::uuid, 'Mr Bob') $$,
   'public templates can be used by any producer');
 update public.templates set name = 'Hijacked';
-select is((select name from public.templates), 'GLL rubric', 'other orgs cannot edit a public template');
+select is((select count(*)::int from public.templates where name = 'Hijacked'), 0, 'other orgs cannot edit a public or curated template');
 select throws_ok($$ select public.clone_contest(current_setting('test.src')::uuid, current_setting('test.e27')::uuid, 'x') $$,
   '42501', null, 'cannot add a contest to another org''s event');
 
@@ -88,7 +88,7 @@ select set_config('request.jwt.claims', '{"sub":"55555555-5555-5555-5555-5555555
 select lives_ok($$ select public.save_contest_as_template(current_setting('test.src')::uuid, 'Official rubric', null, 'curated') $$,
   'platform admin publishes a curated template');
 select set_config('request.jwt.claims', '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
-select is((select array_agg(name order by name) from public.templates), array['GLL rubric', 'Official rubric'], 'everyone sees public and curated templates');
+select is((select array_agg(name order by name) from public.templates where created_by is not null), array['GLL rubric', 'Official rubric'], 'everyone sees public and curated templates');
 
 select * from finish();
 rollback;

@@ -38,7 +38,7 @@ test('worked example: tiebreak, score entry and finalize', async ({ page }) => {
 
   await page.goto(`${CONTEST}/standings`)
   await expect(banner(page)).toHaveText(/Winner: 2 · B · 117 pts \(78\.0%\) · won on tiebreak step 2/)
-  const rows = page.locator('tbody > tr').filter({ has: page.locator('td.font-mono') })
+  const rows = page.locator('tbody > tr').filter({ has: page.locator('button[aria-expanded]') })
   await expect(rows.nth(0)).toContainText('2 · B')
   await expect(rows.nth(1)).toContainText('1 · A')
   await expect(page.getByText('Below the 70% minimum')).toBeVisible()

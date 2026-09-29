@@ -1,6 +1,6 @@
 // Edge-case fixtures from docs/design/02-scoring-engine.md, numbered to match that list.
 import { describe, expect, it } from 'vitest'
-import { computeResults, generateTiebreakSteps, type Aggregation, type ScoringInput } from './index'
+import { computeContest, computeResults, generateTiebreakSteps, type Aggregation, type Rounds, type ScoringInput, type TiebreakStep } from './index'
 
 type Spec = {
   judges: number
@@ -11,7 +11,7 @@ type Spec = {
   // contestant -> component -> one value per judge (null = not entered)
   scores: Record<string, Record<string, (number | null)[]>>
   recusals?: [judgeNo: number, contestant: string][]
-  steps?: string[][]
+  steps?: (string[] | TiebreakStep)[] // plain arrays are ordinary (dropped-judge) steps
   withdrawn?: string[]
   manualWinnerId?: string
 }
@@ -26,7 +26,7 @@ function build(s: Spec): ScoringInput {
       name: cat,
       components: Object.entries(comps).map(([id, max]) => ({ id, min: 0, max, step: 0.5 })),
     })),
-    tiebreakSteps: s.steps ?? [],
+    tiebreakSteps: (s.steps ?? []).map(x => (Array.isArray(x) ? { categoryIds: x, allJudges: false } : x)),
     judges,
     contestants: Object.keys(s.scores).map(id => ({ id, withdrawn: s.withdrawn?.includes(id) ?? false })),
     recusals: (s.recusals ?? []).map(([n, c]) => ({ judgeId: `J${n}`, contestantId: c })),
@@ -222,6 +222,121 @@ describe('computeResults', () => {
     const noJudges = computeResults(build({ judges: 0, categories: { S: { S: 10 } }, scores: { A: { S: [] } } }))
     expect(noJudges.maxPossible).toBe(0)
     expect(noJudges.winner.kind).toBe('incomplete')
+  })
+})
+
+describe('drop high & low by judge total (IML finals)', () => {
+  // Judge totals: J1 11, J2 11, J3 10, J4 10, J5 10 → drop J3 (first lowest) and J2 (last highest).
+  const spec: Spec = {
+    judges: 5, aggregation: 'drop_high_low_total', categories: { X: { X: 10 }, Y: { Y: 10 } },
+    scores: { A: { X: [10, 1, 5, 5, 5], Y: [1, 10, 5, 5, 5] } },
+  }
+
+  it('drops the same two judges from every category', () => {
+    const r = computeResults(build(spec))
+    expect(r.maxPossible).toBe(60)
+    expect(r.standings[0]!.categoryTotals).toEqual({ X: 20, Y: 11 })
+    expect(r.standings[0]!.breakdown.X!.map(b => b.dropped)).toEqual([false, true, true, false, false])
+    expect(r.standings[0]!.breakdown.Y!.map(b => b.dropped)).toEqual([false, true, true, false, false])
+  })
+
+  it('differs from dropping per category', () => {
+    expect(computeResults(build({ ...spec, aggregation: 'drop_high_low' })).standings[0]!.total).toBe(30)
+    expect(computeResults(build(spec)).standings[0]!.total).toBe(31)
+  })
+
+  it('needs 5 judges like the per-category drop', () => {
+    const r = computeResults(build({ ...spec, judges: 4, scores: { A: { X: [1, 2, 3, 4], Y: [1, 2, 3, 4] } } }))
+    expect(r.warnings).toHaveLength(1)
+    expect(r.standings[0]!.total).toBe(20)
+  })
+})
+
+describe('tiebreak step counting every judge', () => {
+  // Dropped totals tie at 15; with the high and low added back, A has 23 and B 21.
+  const spec: Spec = {
+    judges: 5, aggregation: 'drop_high_low', categories: { S: { S: 10 } },
+    scores: { A: { S: [10, 5, 5, 5, 3] }, B: { S: [6, 5, 5, 5, 0] } },
+  }
+
+  it('breaks the tie using all judges', () => {
+    const r = computeResults(build({ ...spec, steps: [{ categoryIds: ['S'], allJudges: true }] }))
+    expect(r.winner).toEqual({ kind: 'decided', contestantId: 'A' })
+    expect(r.standings[0]!.tiebreakPath).toEqual([{ step: 1, value: 28 }])
+  })
+
+  it('an ordinary step on the same category stays tied', () => {
+    const r = computeResults(build({ ...spec, steps: [['S']] }))
+    expect(r.winner.kind).toBe('tie_unresolved')
+  })
+})
+
+describe('computeContest: prelims and finals', () => {
+  // Prelim P and final F, 5 judges, sum. Prelim totals: A 40, B 35, C 35, D 10. Finals: top 2.
+  const spec: Spec = {
+    judges: 5, categories: { P: { P: 10 }, F: { F: 10 } },
+    scores: {
+      A: { P: [8, 8, 8, 8, 8], F: [1, 1, 1, 1, 1] },
+      B: { P: [7, 7, 7, 7, 7], F: [9, 9, 9, 9, 9] },
+      C: { P: [7, 7, 7, 7, 7], F: [null, null, null, null, null] },
+      D: { P: [2, 2, 2, 2, 2], F: [null, null, null, null, null] },
+    },
+  }
+  const rounds = (over: Partial<Rounds>): Rounds => ({
+    prelimCategoryIds: ['P'], prelimAggregation: 'sum', finalistCount: 2, carryPrelim: false, finalistIds: null, ...over,
+  })
+
+  it('ranks prelims on prelim categories only and flags a tie at the cut line', () => {
+    const r = computeContest(build(spec), rounds({}))
+    expect(r.prelim!.maxPossible).toBe(50)
+    expect(r.prelim!.cut).toEqual({ complete: true, certain: ['A'], tied: ['B', 'C'], slots: 1, proposed: null })
+    expect(r.final).toBeNull()
+  })
+
+  it("the producer's pick resolves the tie at the line", () => {
+    const r = computeContest(build(spec), rounds({ manualFinalistIds: ['B'] }))
+    expect(r.prelim!.cut.proposed).toEqual(['A', 'B'])
+  })
+
+  it('a tiebreak step settles the cut (prelims drop high/low; step adds them back)', () => {
+    // Dropped: B 21, C 21. Every judge: B 35, C 32, so B takes the last finalist spot.
+    const tb = { ...spec, scores: { ...spec.scores, C: { ...spec.scores.C, P: [10, 7, 7, 7, 1] } }, steps: [{ categoryIds: ['P', 'F'], allJudges: true }] }
+    const cut = computeContest(build(tb), rounds({ prelimAggregation: 'drop_high_low' })).prelim!.cut
+    expect(cut).toEqual({ complete: true, certain: ['A', 'B'], tied: [], slots: 0, proposed: ['A', 'B'] })
+  })
+
+  it('finals without carry-over (IML) score only final categories, finalists only', () => {
+    const r = computeContest(build(spec), rounds({ finalistIds: ['A', 'B'] }))
+    expect(r.final!.standings.map(s => [s.contestantId, s.total])).toEqual([['B', 45], ['A', 5]])
+    expect(r.final!.maxPossible).toBe(50)
+    expect(r.final!.winner).toEqual({ kind: 'decided', contestantId: 'B' })
+  })
+
+  it('finals with carry-over (IMBB) add prelim and final categories', () => {
+    const r = computeContest(build(spec), rounds({ finalistIds: ['A', 'B'], carryPrelim: true }))
+    expect(r.final!.standings.map(s => [s.contestantId, s.total])).toEqual([['B', 80], ['A', 45]])
+    expect(r.final!.maxPossible).toBe(100)
+  })
+
+  it('cut is not proposed while prelim scores are missing', () => {
+    const r = computeContest(build({ ...spec, scores: { ...spec.scores, D: { P: [2, 2, 2, 2, null], F: [null, null, null, null, null] } } }), rounds({}))
+    expect(r.prelim!.cut).toMatchObject({ complete: false, proposed: null })
+  })
+
+  it('while finals are incomplete, fully scored categories already drop high and low', () => {
+    const drop: Spec = {
+      judges: 5, aggregation: 'drop_high_low', categories: { P: { P: 10 }, F: { F: 10 } },
+      scores: { A: { P: [10, 8, 8, 8, 2], F: [5, null, null, null, null] } },
+    }
+    const s = computeResults(build(drop)).standings[0]!
+    expect(s.categoryTotals).toEqual({ P: 24, F: 5 }) // P drops 10 and 2; F is partial so nothing drops
+    expect(s.pct).toBeCloseTo(29 / 40) // P: 3 counted judges × 10, F: one entered cell × 10
+  })
+
+  it('without rounds it is a single contest', () => {
+    const r = computeContest(build({ judges: 1, categories: { S: { S: 10 } }, scores: { A: { S: [5] } } }), null)
+    expect(r.prelim).toBeNull()
+    expect(r.final!.winner).toEqual({ kind: 'decided', contestantId: 'A' })
   })
 })
 
