@@ -17,6 +17,7 @@ async function signIn(page: Page) {
   await expect.poll(async () => (id = (await (await api.get(`${MAILPIT}/api/v1/messages`)).json()).messages?.[0]?.ID ?? '')).not.toBe('')
   const html: string = (await (await api.get(`${MAILPIT}/api/v1/message/${id}`)).json()).HTML
   await page.goto(html.match(/href="([^"]+)"/)![1]!.replace(/&amp;/g, '&'))
+  await page.getByRole('link', { name: 'Dashboard' }).click() // the link lands on the home page; its banner links to the dashboard
   await expect(page.getByRole('heading', { name: 'Your organizations' })).toBeVisible()
 }
 

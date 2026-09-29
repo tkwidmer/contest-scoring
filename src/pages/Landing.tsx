@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 import { Brand } from '../components/Brand'
 import { card } from '../components/ui'
+import { useSession } from '../context/auth'
 
-// Public landing page, shown at / to signed-out visitors. Screenshots in public/landing use fictional contests only.
+// Public landing page at /, for everyone. The signed-in app lives under /dashboard. Screenshots in public/landing use fictional contests only.
 const cta = 'inline-block rounded bg-accent px-5 py-2.5 font-medium text-on-accent hover:opacity-90'
 const ctaQuiet = 'inline-block rounded border border-rule px-5 py-2.5 font-medium hover:border-accent'
 
@@ -52,12 +53,17 @@ function Shot({ name, alt, className = '' }: { name: string; alt: string; classN
 }
 
 export function Landing() {
+  const session = useSession()
   return (
     <div className="min-h-dvh">
       <header className="border-b border-rule bg-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Brand className="text-2xl" />
-          <Link to="/login" className="rounded border border-rule px-3 py-1 text-sm hover:border-accent">Sign in</Link>
+          <nav className="flex items-center gap-2 text-sm">
+            {session
+              ? <Link to="/dashboard" className="rounded bg-accent px-3 py-1 font-medium text-on-accent hover:opacity-90">Dashboard</Link>
+              : <Link to="/login" className="rounded border border-rule px-3 py-1 hover:border-accent">Sign in</Link>}
+          </nav>
         </div>
       </header>
 

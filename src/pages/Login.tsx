@@ -15,7 +15,7 @@ export function Login() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  if (session) return <Navigate to="/" replace />
+  if (session) return <Navigate to="/dashboard" replace />
 
   async function run(action: () => Promise<{ error: Error | null }>, onOk?: () => void) {
     setBusy(true)
@@ -28,7 +28,7 @@ export function Login() {
 
   const sendCode = (e: FormEvent) => {
     e.preventDefault()
-    run(() => supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } }), () => setSent(true))
+    run(() => supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/dashboard` } }), () => setSent(true))
   }
   const verify = (e: FormEvent) => {
     e.preventDefault()
