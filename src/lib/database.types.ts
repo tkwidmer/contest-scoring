@@ -82,15 +82,6 @@ isOneToOne: false
           Functions: {
             "create_org":
 { Args: { "p_name": string }; Returns: string
-                           },
-"is_org_member":
-{ Args: { "p_org": string,"p_roles"?: (string)[] }; Returns: boolean
-                           },
-"is_platform_admin":
-{ Args: Record<PropertyKey, never>; Returns: boolean
-                           },
-"shares_org":
-{ Args: { "p_user": string }; Returns: boolean
                            }
           }
           Enums: {

@@ -15,7 +15,7 @@
 | Public | — | anon |
 
 ## Helper functions
-All are `security definer`, `stable`, and `set search_path = ''`.
+All live in the `private` schema, which the REST API doesn't expose. All are `security definer`, `stable`, and `set search_path = ''`.
 - `is_org_member(org uuid, roles text[])` → bool
 - `contest_org(contest uuid)` → uuid (in practice we read the denormalized `contests.org_id`)
 - `my_judge_ids(contest uuid)` → setof uuid

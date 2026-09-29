@@ -75,9 +75,8 @@
             {
               "id": "P0.1.1",
               "title": "git init, GitHub repo, CLAUDE.md",
-              "status": "in_progress",
-              "doc": "design/05-architecture.md",
-              "note": "Local repo + CLAUDE.md done; GitHub remote pending"
+              "status": "done",
+              "doc": "design/05-architecture.md"
             },
             {
               "id": "P0.1.2",
@@ -101,15 +100,16 @@
             {
               "id": "P0.2.1",
               "title": "Supabase staging + prod projects, local stack",
-              "status": "in_progress",
+              "status": "done",
               "doc": "design/05-architecture.md",
-              "note": "Local stack done; hosted projects pending"
+              "note": "One free hosted project (assvtegfewidtrzukhbr) doubles as staging and prod"
             },
             {
               "id": "P0.2.2",
               "title": "Vercel project, env vars, SPA rewrite",
-              "status": "todo",
-              "doc": "design/05-architecture.md"
+              "status": "blocked",
+              "doc": "design/05-architecture.md",
+              "note": "Vercel connector lacks create permission; import in the dashboard"
             }
           ]
         },
