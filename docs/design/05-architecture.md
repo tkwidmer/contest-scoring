@@ -27,8 +27,7 @@ contest-scoring/
     lib/
       supabase.ts           client
       database.types.ts     generated
-      scoring/              computeResults + tests + fixtures   (02)
-      tiebreak.ts           step generation                      (02)
+      scoring/              computeResults, generateTiebreakSteps + tests (02)
       saveQueue.ts          resilient save + tests               (below)
     context/AuthProvider.tsx
     pages/                  one file per route in 04

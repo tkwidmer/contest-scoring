@@ -124,7 +124,7 @@ Settings: `drop_high_low`, 5 judges (J1–J5), threshold **70 %**. Generated tie
 8. Duplicate high values → only one is dropped.
 9. Recused judge where no other judge has scored the component yet → stays missing, incomplete.
 10. Missing unrecused score → incomplete, projected leader chosen by pct of entered sheets.
-11. Backfill mean that repeats (e.g. 25/3) → rounded half-up to 8.33.
+11. Backfill mean that needs rounding (e.g. 24.5/3 = 8.1666…) → rounded half-up to 8.17.
 12. Withdrawn contestant → excluded from ranks.
 13. Three-way tie where step 1 splits off one contestant and step 2 splits the other two.
 14. Zero contestants or zero judges → empty standings, no crash.

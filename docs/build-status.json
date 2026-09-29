@@ -146,13 +146,14 @@
             {
               "id": "P1.1.1",
               "title": "computeResults + 14 edge-case fixtures",
-              "status": "todo",
-              "doc": "design/02-scoring-engine.md"
+              "status": "done",
+              "doc": "design/02-scoring-engine.md",
+              "note": "16 Vitest cases, mutation-checked"
             },
             {
               "id": "P1.1.2",
               "title": "Tiebreak step generation",
-              "status": "todo",
+              "status": "done",
               "doc": "design/02-scoring-engine.md"
             }
           ]
