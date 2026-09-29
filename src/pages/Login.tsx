@@ -41,7 +41,7 @@ export function Login() {
         <form onSubmit={sendCode} className="grid gap-3">
           <label htmlFor="email" className="text-sm text-muted">Email</label>
           <input id="email" type="email" required autoComplete="email" className={input} value={email} onChange={e => setEmail(e.target.value)} />
-          <button className={button} disabled={busy}>{busy ? 'Sending…' : 'Email me a sign-in code'}</button>
+          <button className={button} disabled={busy}>{busy ? 'Sending…' : 'Email me a sign-in link'}</button>
         </form>
       ) : (
         <form onSubmit={verify} className="grid gap-3">
