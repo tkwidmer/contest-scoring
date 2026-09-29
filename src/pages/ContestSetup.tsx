@@ -139,7 +139,7 @@ export function ContestSetup() {
         {/* ── Settings ── */}
         <section className="grid gap-4">
           <h2 className={h2}>Settings</h2>
-          <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
+          <div className="grid items-start gap-4 sm:grid-cols-2">
             <div className="grid gap-1">
               <label htmlFor="c-name" className={label}>Contest name</label>
               <input id="c-name" key={contest.name} defaultValue={contest.name} maxLength={120} className={input}
@@ -176,8 +176,8 @@ export function ContestSetup() {
               <label htmlFor="c-report" className={label}>Report totals as</label>
               <select id="c-report" value={contest.report_as} disabled={locked} className={input}
                 onChange={e => updateContest({ report_as: e.target.value })}>
-                <option value="total">The sum of the counted judges</option>
-                <option value="average">The average of the counted judges (e.g. a perfect score of 500)</option>
+                <option value="total">Sum of the counted judges</option>
+                <option value="average">Average of the counted judges (e.g. out of 500)</option>
               </select>
             </div>
             <label className="flex items-center gap-2 self-center">
