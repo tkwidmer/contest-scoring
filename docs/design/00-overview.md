@@ -60,7 +60,7 @@ A web platform where producers:
 | D21 | Engine | A pure TypeScript `scoring` module computes results in the browser. Publishing freezes a JSON snapshot. | 02, 05 |
 | D22 | Stack | Vite + React 19 + React Router 7 + Tailwind 4 + supabase-js + **TypeScript**, deployed to Vercel, with GitHub Actions and Vitest. Security is enforced RLS-first. | 05 |
 
-### Assumed defaults (change any of these before P1)
+### Confirmed defaults (reviewed and confirmed by the owner, 2026-09-29)
 - **A1** Order of operations: backfill recusals (per component) → sum into category subtotal per judge → trim high/low per category → sum.
 - **A2** Backfilled values are rounded to 2 decimals, half-up. All other math is exact at 2-decimal scale (integer hundredths), so ties are deterministic.
 - **A3** Tiebreak steps use the same aggregation as the main total (trimmed subtotals when drop mode is on).
