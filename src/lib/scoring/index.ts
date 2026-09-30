@@ -11,7 +11,7 @@ export type TiebreakStep = { categoryIds: string[]; allJudges: boolean }
 
 // A tally-master deduction a category allows, e.g. overtime. points come off the category on the scale the
 // contest reports (per-judge average or sum); percent comes off the category's aggregated score.
-export type Deduction = { label: string; points?: number; percent?: number }
+export type Deduction = { label: string; points?: number; percent?: number; afterSeconds?: number } // afterSeconds: the speech timer's trigger
 
 export type Category = {
   id: string

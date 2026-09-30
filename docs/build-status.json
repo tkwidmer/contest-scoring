@@ -572,7 +572,7 @@
             {
               "id": "P4.2.2",
               "title": "Speech timer that applies the overtime deduction",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             },
             {

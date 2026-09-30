@@ -9,7 +9,7 @@ import { useContestRole } from '../lib/useContestRole'
 import { buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
 
 type Component = { id: string; name: string; description: string | null; min_points: number; max_points: number; step: number; sort: number }
-type Deduction = { label: string; points?: number; percent?: number }
+type Deduction = { label: string; points?: number; percent?: number; afterSeconds?: number }
 type Category = {
   id: string; name: string; sort: number; drop_rank: number | null; round: string; components: Component[]
   scored_by: string; guest_average: boolean; deductions: Deduction[]
@@ -398,12 +398,13 @@ export function ContestSetup() {
 
 // Tally-master deductions a category allows (e.g. overtime), as points off the reported score or a percentage.
 function Deductions({ value, locked, onSave }: { value: Deduction[]; locked: boolean; onSave: (d: Deduction[]) => Promise<boolean> }) {
-  const set = (i: number, patch: Partial<Deduction> & { unit?: 'points' | 'percent'; amount?: number }) => {
+  const set = (i: number, patch: Partial<Deduction> & { unit?: 'points' | 'percent'; amount?: number; after?: number | null }) => {
     const next = value.map((d, j) => {
       if (j !== i) return d
       const amount = patch.amount ?? d.points ?? d.percent ?? 0
       const unit = patch.unit ?? (d.percent != null ? 'percent' : 'points')
-      return { label: patch.label ?? d.label, ...(unit === 'percent' ? { percent: amount } : { points: amount }) }
+      const after = patch.after !== undefined ? patch.after : d.afterSeconds
+      return { label: patch.label ?? d.label, ...(unit === 'percent' ? { percent: amount } : { points: amount }), ...(after != null ? { afterSeconds: after } : {}) }
     })
     return onSave(next)
   }
@@ -424,6 +425,13 @@ function Deductions({ value, locked, onSave }: { value: Deduction[]; locked: boo
             <option value="points">points off the reported score</option>
             <option value="percent">% of the category</option>
           </select>
+          <label className="flex items-center gap-1 text-muted" title="For the speech timer on the Scores tab: suggest this deduction when the time runs past this many seconds">
+            after
+            <input aria-label={`${d.label} applies after seconds`} key={`a:${d.afterSeconds ?? ''}`} type="number" min={0} step={1} disabled={locked}
+              defaultValue={d.afterSeconds ?? ''} placeholder="sec" className={`${input} w-20 py-1 font-mono`}
+              onBlur={e => { const v = e.target.value === '' ? null : num(e.target.value); if (v !== (d.afterSeconds ?? null)) set(i, { after: v }) }} />
+            s
+          </label>
           {!locked && <button type="button" className={iconButton} aria-label={`Remove ${d.label}`} onClick={() => onSave(value.filter((_, j) => j !== i))}>✕</button>}
         </div>
       ))}

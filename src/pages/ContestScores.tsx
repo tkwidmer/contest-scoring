@@ -6,10 +6,10 @@ import { cellKey, createSaveQueue, type Cell, type QueueState } from '../lib/sav
 import { fmt, problem, sendCell, type ScoreComponent } from '../lib/scoreCells'
 import type { TablesInsert } from '../lib/database.types'
 import { ContestHeader } from '../components/ContestHeader'
-import { card, h2, iconButton, input } from '../components/ui'
+import { buttonQuiet, card, h2, iconButton, input } from '../components/ui'
 
 type Component = ScoreComponent
-type Deduction = { label: string; points?: number; percent?: number }
+type Deduction = { label: string; points?: number; percent?: number; afterSeconds?: number }
 type Category = { id: string; name: string; round: string; scored_by: string; guest_average: boolean; deductions: Deduction[]; components: Component[] }
 type Judge = { id: string; name: string; guest: boolean }
 type Penalty = { id: string; contestant_id: string; category_id: string; tier: number }
@@ -214,6 +214,10 @@ export function ContestScores() {
         const cols = columnsFor(cat)
         return (
           <section className="grid gap-3">
+            {editable && cat.deductions.some(d => d.afterSeconds != null) && (
+              <SpeechTimer cat={cat} contestants={contestants.filter(c => !finalsOnly(cat) || finalists.has(c.id))}
+                apply={(cid, tier) => setPenaltyCount(cid, cat.id, tier, Math.max(1, penalties.filter(p => p.contestant_id === cid && p.category_id === cat.id && p.tier === tier).length))} />
+            )}
             <Picker label="Category" value={cat.id} onChange={setCategoryId}
               options={categories.map(c => ({ id: c.id, name: finalsOnly(c) ? `${c.name} (finals)` : rounds ? `${c.name} (prelims)` : c.name }))} />
             {finalsOnly(cat) && finalists.size === 0 && (
@@ -296,6 +300,42 @@ export function ContestScores() {
             </table>
           </div>
         </section>
+      )}
+    </div>
+  )
+}
+
+// Speech timer for the tally master: time a contestant, then apply the deduction whose "after" time was passed
+// (the latest one that applies). Deductions without a time are left to apply by hand.
+function SpeechTimer({ cat, contestants, apply }: { cat: Category; contestants: Person[]; apply: (contestantId: string, tier: number) => void }) {
+  const [who, setWho] = useState(contestants[0]?.id ?? '')
+  const [startedAt, setStartedAt] = useState<number | null>(null)
+  const [elapsed, setElapsed] = useState(0)
+  const [now, setNow] = useState(0)
+  useEffect(() => {
+    if (startedAt == null) return
+    const t = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(t)
+  }, [startedAt])
+  const seconds = startedAt != null ? Math.max(0, now - startedAt) / 1000 : elapsed
+  const clock = `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
+  const tier = cat.deductions.map((d, i) => ({ d, i })).filter(x => x.d.afterSeconds != null && seconds > x.d.afterSeconds)
+    .sort((a, b) => b.d.afterSeconds! - a.d.afterSeconds!)[0]
+  return (
+    <div className={`${card} flex flex-wrap items-center gap-3 px-3 py-2`}>
+      <span className="text-sm font-semibold">{cat.name} timer</span>
+      <select aria-label="Timed contestant" className={`${input} max-w-xs py-1`} value={who} onChange={e => { setWho(e.target.value); setStartedAt(null); setElapsed(0) }}>
+        {contestants.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+      <span className={`font-mono text-2xl ${tier ? 'text-danger' : ''}`} role="timer">{clock}</span>
+      {startedAt == null
+        ? <button className={buttonQuiet} onClick={() => { const t = Date.now(); setNow(t); setStartedAt(t - elapsed * 1000) }}>{elapsed ? 'Resume' : 'Start'}</button>
+        : <button className={buttonQuiet} onClick={() => { setElapsed((Date.now() - startedAt) / 1000); setStartedAt(null) }}>Stop</button>}
+      <button className={buttonQuiet} onClick={() => { setStartedAt(null); setElapsed(0) }}>Reset</button>
+      {startedAt == null && tier && (
+        <button className="rounded bg-danger px-3 py-1.5 text-sm font-medium text-on-accent" onClick={() => apply(who, tier.i)}>
+          Apply “{tier.d.label}”
+        </button>
       )}
     </div>
   )
