@@ -70,18 +70,14 @@ export function EventHome() {
         <p className="text-muted">{[event.starts_on, event.venue].filter(Boolean).join(' · ')}</p>
       </div>
 
-      {!event.approved_at && (
-        <div role="status" className={`${card} grid gap-2 border-accent px-4 py-3`}>
-          <p><strong>This event isn't approved yet.</strong> Set up contests now; scoring opens once the $100 event fee is paid and
-            the event is approved. <Link to="/pricing" className="text-accent underline">Pricing</Link></p>
-          {event.approval_requested_at
-            ? <p className="text-sm text-muted">Approval requested {new Date(event.approval_requested_at).toLocaleDateString()}. We'll email you how to pay the fee.</p>
-            : <button className={`${button} justify-self-start`} onClick={async () => {
-                const { error } = await supabase.rpc('request_event_approval', { p_event: eventId })
-                if (error) setError(friendly(error)); else load()
-              }}>Request approval</button>}
-        </div>
-      )}
+      <Approval event={event} onRequest={async () => {
+        const { error } = await supabase.rpc('request_event_approval', { p_event: eventId })
+        if (error) setError(friendly(error)); else load()
+      }} onDate={async date => {
+        const { error } = await supabase.from('events').update({ starts_on: date || null }).eq('id', eventId)
+        if (error) setError(friendly(error)); else load()
+      }} />
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
       <section className="grid gap-3">
         <h2 className={h2}>Contests</h2>
@@ -120,7 +116,43 @@ export function EventHome() {
         </form>
         <p className="text-xs text-muted">Templates and copies bring the scoresheet, scoring method, minimum and tiebreaks. Contestants and judges are added fresh.</p>
       </section>
-      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+    </div>
+  )
+}
+
+// Approval covers one date: contests can start scoring from 14 days before the event to 14 days after
+// (enforced by set_contest_status, supabase/migrations/20260930001200_approval_window.sql).
+const WINDOW_DAYS = 14
+const shift = (iso: string, days: number) => { const d = new Date(`${iso}T00:00:00`); d.setDate(d.getDate() + days); return d }
+const long = (d: Date) => d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+
+function Approval({ event, onRequest, onDate }: { event: Event; onRequest: () => void; onDate: (date: string) => void }) {
+  if (event.approved_at) {
+    const anchor = event.starts_on ?? event.approved_at.slice(0, 10)
+    const opens = shift(anchor, -WINDOW_DAYS), closes = shift(anchor, WINDOW_DAYS)
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    if (today > closes) return (
+      <div role="status" className={`${card} border-danger px-4 py-3`}>
+        <strong>This event's approval ended on {long(closes)}.</strong> Contests already scored stay here, but new ones can't
+        start scoring. Create a new event for your next contest.
+      </div>
+    )
+    return <p className="text-sm text-muted">✓ Approved. Contests can start scoring from {long(opens)} to {long(closes)}.</p>
+  }
+  return (
+    <div role="status" className={`${card} grid gap-3 border-accent px-4 py-3`}>
+      <p><strong>This event isn't approved yet.</strong> Set up contests now; scoring opens once the $100 event fee is paid and
+        the event is approved. Approval covers contests that start scoring within two weeks of the event date.{' '}
+        <Link to="/pricing" className="text-accent underline">Pricing</Link></p>
+      <label className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-muted">Event date</span>
+        <input type="date" className={`${input} max-w-48`} defaultValue={event.starts_on ?? ''} key={event.starts_on}
+          onBlur={e => e.target.value !== (event.starts_on ?? '') && onDate(e.target.value)} />
+      </label>
+      {event.approval_requested_at
+        ? <p className="text-sm text-muted">Approval requested {new Date(event.approval_requested_at).toLocaleDateString()}. We'll email you how to pay the fee.</p>
+        : <button className={`${button} justify-self-start`} disabled={!event.starts_on} onClick={onRequest}>
+            {event.starts_on ? 'Request approval' : 'Add the event date to request approval'}</button>}
     </div>
   )
 }

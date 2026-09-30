@@ -365,6 +365,12 @@
               "doc": "design/03-auth-rls.md"
             },
             {
+              "id": "P1.6.17",
+              "title": "Approval window: scoring can start only within 14 days of the event date; admin alert for pending requests",
+              "status": "done",
+              "doc": "design/03-auth-rls.md"
+            },
+            {
               "id": "P1.6.16",
               "title": "Online payment for the event fee",
               "status": "todo",

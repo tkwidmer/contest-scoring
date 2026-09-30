@@ -25,6 +25,7 @@ const faq = [
   ['What counts as an event?', 'A weekend or show where titles are awarded. One fee covers every contest at it, so an event with a leather, a bootblack and a bear contest is still $100.'],
   ['Can I try it before paying?', 'Yes. Everything except scoring works before approval: set up the rubric, add contestants and judges, and start from a template or a past contest.'],
   ['Is there a subscription?', 'No. You pay once per event, and only for events you actually score.'],
+  ['How long does approval last?', 'For the event itself: contests can start scoring from two weeks before the event date to two weeks after. Next year’s event is a new event.'],
 ]
 
 export function Pricing() {
@@ -90,7 +91,7 @@ export function Pricing() {
               </li>
             ))}
           </ol>
-          <dl className="grid gap-5 md:grid-cols-3">
+          <dl className="grid gap-5 md:grid-cols-2">
             {faq.map(([q, a]) => (
               <div key={q} className="grid content-start gap-1">
                 <dt className="font-semibold">{q}</dt>

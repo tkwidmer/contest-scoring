@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(20);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'alice@test.dev'),
@@ -29,6 +29,9 @@ select throws_ok($$ select public.set_contest_status(current_setting('test.c')::
   'This event isn''t approved yet. Scoring opens once the event fee is paid and the event is approved.', 'no scoring before approval');
 select throws_ok($$ select public.set_event_approval(current_setting('test.event')::uuid, true) $$, '42501', null, 'producers cannot approve');
 select throws_ok($$ select * from public.event_approvals() $$, '42501', null, 'producers cannot see the approval queue');
+select throws_ok($$ select public.request_event_approval(current_setting('test.event')::uuid) $$, 'P0001',
+  'Add the event''s date before requesting approval', 'approval needs a date');
+update public.events set starts_on = current_date + 3;
 select lives_ok($$ select public.request_event_approval(current_setting('test.event')::uuid) $$, 'producer requests approval');
 select isnt((select approval_requested_at from public.events), null, 'the request is recorded');
 
@@ -45,6 +48,26 @@ select lives_ok($$ select public.set_event_approval(current_setting('test.event'
 
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 select lives_ok($$ select public.set_contest_status(current_setting('test.c')::uuid, 'scoring') $$, 'scoring opens once approved');
+select throws_ok($$ update public.events set starts_on = current_date + 400 $$, 'P0001', null, 'the date is locked while approved');
+
+-- The approval window: two weeks either side of the event date.
+reset role;
+alter table public.events disable trigger events_lock_approved_date; -- move the date around for these checks
+update public.events set starts_on = current_date + 20;
+update public.contests set status = 'draft';
+set local role authenticated;
+select throws_ok($$ select public.set_contest_status(current_setting('test.c')::uuid, 'scoring') $$, 'P0001',
+  format('Scoring opens on %s, two weeks before the event.', to_char(current_date + 6, 'FMMonth FMDD, YYYY')), 'too early');
+reset role;
+update public.events set starts_on = current_date - 15;
+set local role authenticated;
+select throws_ok($$ select public.set_contest_status(current_setting('test.c')::uuid, 'scoring') $$, 'P0001',
+  format('This event''s approval ended on %s. Create a new event to score more contests.', to_char(current_date - 1, 'FMMonth FMDD, YYYY')),
+  'too late: the event can''t be reused');
+reset role;
+update public.events set starts_on = current_date - 14;
+set local role authenticated;
+select lives_ok($$ select public.set_contest_status(current_setting('test.c')::uuid, 'scoring') $$, 'last day of the window');
 
 -- Revoking stops other contests starting; ones already scoring carry on.
 select set_config('request.jwt.claims', '{"sub":"99999999-9999-9999-9999-999999999999","role":"authenticated"}', true);
