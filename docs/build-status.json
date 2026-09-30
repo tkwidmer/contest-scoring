@@ -566,7 +566,7 @@
             {
               "id": "P4.2.1",
               "title": "'Waiting on' panel with a copyable nudge for judges",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             },
             {
@@ -584,7 +584,7 @@
             {
               "id": "P4.2.4",
               "title": "Bulk add contestants and judges from a pasted list",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             },
             {
@@ -608,7 +608,7 @@
             {
               "id": "P4.3.2",
               "title": "Show rubric notes under each score box",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             },
             {

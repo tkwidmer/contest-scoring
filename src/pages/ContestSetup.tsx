@@ -8,7 +8,7 @@ import { ContestHeader } from '../components/ContestHeader'
 import { useContestRole } from '../lib/useContestRole'
 import { buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
 
-type Component = { id: string; name: string; min_points: number; max_points: number; step: number; sort: number }
+type Component = { id: string; name: string; description: string | null; min_points: number; max_points: number; step: number; sort: number }
 type Deduction = { label: string; points?: number; percent?: number }
 type Category = {
   id: string; name: string; sort: number; drop_rank: number | null; round: string; components: Component[]
@@ -40,7 +40,7 @@ export function ContestSetup() {
         .select('id, name, status, org_id, aggregation, threshold_pct, anonymize_comments, event_id, events(name), finalist_count, prelim_aggregation, prelim_carries, report_as, threshold_single_only')
         .eq('id', contestId).maybeSingle(),
       supabase.from('categories')
-        .select('id, name, sort, drop_rank, round, scored_by, guest_average, deductions, components(id, name, min_points, max_points, step, sort)')
+        .select('id, name, sort, drop_rank, round, scored_by, guest_average, deductions, components(id, name, description, min_points, max_points, step, sort)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
       supabase.from('tiebreak_steps').select('step_no, category_ids, all_judges').eq('contest_id', contestId).order('step_no'),
     ])
@@ -269,6 +269,9 @@ export function ContestSetup() {
                         <td className="py-1 pr-2">
                           <input aria-label="Component name" key={k.name} defaultValue={k.name} maxLength={120} disabled={locked} className={input}
                             onBlur={e => e.target.value.trim() && e.target.value !== k.name && saveField(e.target, k.name, () => updateComponent(k.id, { name: e.target.value.trim() }))} />
+                          <input aria-label={`${k.name} notes for judges`} key={`d:${k.description ?? ''}`} defaultValue={k.description ?? ''} maxLength={500} disabled={locked}
+                            placeholder="Notes for judges (optional), e.g. what a top score looks like" className={`${input} mt-1 py-1 text-sm`}
+                            onBlur={e => e.target.value.trim() !== (k.description ?? '') && saveField(e.target, k.description ?? '', () => updateComponent(k.id, { description: e.target.value.trim() || null }))} />
                         </td>
                         {(['min_points', 'max_points', 'step'] as const).map(f => (
                           <td key={f} className="pr-2">

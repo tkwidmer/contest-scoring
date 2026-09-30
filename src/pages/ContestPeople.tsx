@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
 import { useWrites } from '../lib/useWrites'
 import { copyInvite, sendSignInLink } from '../lib/invites'
+import { parseContestants, parseJudges } from '../lib/bulk'
 import { ContestHeader } from '../components/ContestHeader'
 import { button, buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
 
@@ -78,6 +79,20 @@ export function ContestPeople() {
     setNewContestant(blankContestant)
     await run()
   }
+
+  // Pasted lists. Contestants come back in insert order, so emails are matched by position.
+  async function addContestants(text: string) {
+    const list = parseContestants(text)
+    const { data, error } = await supabase.from('contestants').insert(list.map((c, i) => ({
+      contest_id: contestId, display_name: c.display_name, number: c.number, represents: c.represents, sort: nextSort(contestants) + i,
+    }))).select('id')
+    if (error) { setError(friendly(error)); return false }
+    const contacts = list.flatMap((c, i) => (c.email && data[i] ? [{ contestant_id: data[i].id, email: c.email }] : []))
+    return contacts.length ? run(supabase.from('contestant_contacts').insert(contacts)) : run()
+  }
+  const addJudges = (text: string) => run(supabase.from('judges').insert(parseJudges(text).map((j, i) => ({
+    contest_id: contestId, name: j.name, email: j.email, sort: nextSort(judges) + i, guest: false,
+  }))))
 
   async function addJudge(e: FormEvent) {
     e.preventDefault()
@@ -184,6 +199,8 @@ export function ContestPeople() {
               <button className={button}>Add contestant</button>
             </form>
           )}
+          {isProducer && draft && <Paste what="contestants" hint={'One per line, from a spreadsheet or typed:\n1, Rex Harlan, Mr. Pacific Leather, rex@example.com\n2, Marcus Vale'}
+            count={t => parseContestants(t).length} onAdd={addContestants} />}
         </section>
 
         {/* ── Judges ── */}
@@ -230,6 +247,8 @@ export function ContestPeople() {
               <button className={button}>Add judge</button>
             </form>
           )}
+          {isProducer && <Paste what="judges" hint={'One per line: name, email\nJudge Ana, ana@example.com\nJudge Bo'}
+            count={t => parseJudges(t).length} onAdd={addJudges} />}
         </section>
 
         {/* ── Recusals ── */}
@@ -269,5 +288,20 @@ export function ContestPeople() {
         </section>
       </fieldset>
     </div>
+  )
+}
+
+function Paste({ what, hint, count, onAdd }: { what: string; hint: string; count: (text: string) => number; onAdd: (text: string) => Promise<boolean> }) {
+  const [text, setText] = useState('')
+  const n = count(text)
+  return (
+    <details className="text-sm">
+      <summary className="cursor-pointer text-accent">Paste a list of {what}</summary>
+      <div className="mt-2 grid gap-2">
+        <textarea aria-label={`Paste ${what}`} rows={5} placeholder={hint} className={`${input} font-mono text-sm`} value={text} onChange={e => setText(e.target.value)} />
+        <button type="button" className={`${button} justify-self-start`} disabled={!n}
+          onClick={async () => { if (await onAdd(text)) setText('') }}>Add {n} {what}</button>
+      </div>
+    </details>
   )
 }

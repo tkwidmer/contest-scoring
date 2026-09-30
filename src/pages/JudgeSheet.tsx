@@ -10,7 +10,7 @@ import type { TablesInsert } from '../lib/database.types'
 // A judge scoring their own sheets on a phone (design doc 04, section 5). RLS shows them only their own scores,
 // so nothing here can reveal another judge's numbers. A sheet is one contestant x one category; submitting locks it
 // (with its comment). Comments go to the producer, who reviews them before contestants see them.
-type Category = { id: string; name: string; round: string; scored_by: string; guest_average: boolean; components: ScoreComponent[] }
+type Category = { id: string; name: string; round: string; scored_by: string; guest_average: boolean; components: (ScoreComponent & { description: string | null })[] }
 type Contestant = { id: string; display_name: string; number: number | null; withdrawn: boolean; finalist: boolean }
 type Contest = { id: string; name: string; status: string; finalist_count: number | null; events: { name: string } | null }
 type Me = { id: string; name: string; guest: boolean }
@@ -43,7 +43,7 @@ export function JudgeSheet() {
     if (!c.data || !j.data) return setError("You're not a judge for this contest. Sign in with the email the producer invited.")
     const judge = j.data
     const [cats, cs, rs, sc, sub, cm] = await Promise.all([
-      supabase.from('categories').select('id, name, round, scored_by, guest_average, components(id, name, min_points, max_points, step)')
+      supabase.from('categories').select('id, name, round, scored_by, guest_average, components(id, name, description, min_points, max_points, step)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
       supabase.from('contestants').select('id, display_name, number, withdrawn, finalist').eq('contest_id', contestId).order('sort'),
       supabase.from('recusals').select('contestant_id').eq('judge_id', judge.id),
@@ -170,6 +170,7 @@ export function JudgeSheet() {
                       return (
                         <label key={k.id} className="grid gap-1">
                           <span className="flex justify-between gap-2"><span>{k.name}</span><span className="text-sm text-muted">{fmt(k.min_points)}–{fmt(k.max_points)}</span></span>
+                          {k.description && <span className="text-sm text-muted">{k.description}</span>}
                           <input inputMode="decimal" disabled={!open || isLocked} key={`${key}:${v ?? ''}`} defaultValue={v ?? ''}
                             aria-invalid={!!fail || undefined}
                             className="h-12 rounded border border-rule bg-surface px-3 font-mono text-lg focus:border-accent focus:outline-none disabled:opacity-60 aria-invalid:border-danger"

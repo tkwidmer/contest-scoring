@@ -16,7 +16,7 @@ type Contest = {
   report_as: string; threshold_single_only: boolean
 }
 type Named = { id: string; name: string }
-type Names = { contestants: Map<string, string>; judges: (Named & { guest: boolean })[]; categories: (Named & { round: string; scored_by: string; guest_average: boolean })[] }
+type Names = { contestants: Map<string, string>; judges: (Named & { guest: boolean; user_id?: string | null })[]; categories: (Named & { round: string; scored_by: string; guest_average: boolean })[] }
 
 const fmt = (n: number) => Number(n.toFixed(2)).toString()
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`
@@ -45,7 +45,7 @@ export function ContestStandings() {
       supabase.from('categories').select('id, name, round, scored_by, guest_average, deductions, components(id, min_points, max_points, step)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
       supabase.from('contestants').select('id, display_name, number, withdrawn, finalist').eq('contest_id', contestId).order('sort'),
-      supabase.from('judges').select('id, name, guest').eq('contest_id', contestId).order('sort'),
+      supabase.from('judges').select('id, name, guest, user_id').eq('contest_id', contestId).order('sort'),
       supabase.from('recusals').select('judge_id, contestant_id, judges!inner(contest_id)').eq('judges.contest_id', contestId),
       supabase.from('scores').select('judge_id, contestant_id, component_id, value').eq('contest_id', contestId),
       supabase.from('tiebreak_steps').select('category_ids, all_judges').eq('contest_id', contestId).order('step_no'),
@@ -289,7 +289,8 @@ export function ContestStandings() {
         <div className={`${card} overflow-x-auto`}>
           <table className="text-sm">
             <thead><tr className="border-b border-rule text-muted"><th className="px-3 py-2 text-left font-normal">Judge</th>
-              {names.categories.map(c => <th key={c.id} className="px-3 font-normal">{c.name}{hasRounds && <span className="block text-xs">{c.round === 'prelim' ? 'prelims' : 'finals'}</span>}</th>)}</tr></thead>
+              {names.categories.map(c => <th key={c.id} className="px-3 font-normal">{c.name}{hasRounds && <span className="block text-xs">{c.round === 'prelim' ? 'prelims' : 'finals'}</span>}</th>)}
+              <th className="px-3 text-left font-normal">Still to submit</th></tr></thead>
             <tbody>
               {fillers.map(j => (
                 <tr key={j.id} className="border-b border-rule last:border-0">
@@ -300,6 +301,16 @@ export function ContestStandings() {
                       {p.total === 0 ? '–' : p.done === p.total ? '✓' : `${p.done}/${p.total}`}
                       {p.locked > 0 && <span className="block text-xs text-muted" title="Sheets the judge has submitted">🔒 {p.locked}/{p.sheets}</span>}</td>
                   })}
+                  <td className="px-3 py-1.5">{(() => {
+                    // Judges who sign in submit their own sheets; paper judges' sheets are the tally team's to enter.
+                    if (!('user_id' in j) || !j.user_id) return <span className="text-xs text-muted">{j.id === PRODUCER ? '' : 'paper'}</span>
+                    const left = names.categories.map(c => { const p = progress(j.id, c.id); return { c, n: p.sheets - p.locked } }).filter(x => x.n > 0)
+                    const total = left.reduce((t, x) => t + x.n, 0)
+                    if (!total) return <span className="text-xs text-muted">all submitted</span>
+                    const text = `Hi ${j.name}! You still have ${total} sheet${total === 1 ? '' : 's'} to submit for ${contest.name}: ${left.map(x => `${x.c.name} (${x.n})`).join(', ')}. Open ${window.location.origin}/dashboard and tap the contest under Judging. Thank you!`
+                    return <span className="flex items-center gap-2 whitespace-nowrap"><span className="font-mono">{total}</span>
+                      <button className="text-xs text-accent underline" onClick={() => navigator.clipboard.writeText(text).catch(() => window.prompt('Copy the reminder:', text))}>Copy reminder</button></span>
+                  })()}</td>
                 </tr>
               ))}
             </tbody>
