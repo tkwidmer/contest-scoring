@@ -222,6 +222,8 @@ export function ContestStandings() {
           <label className="grid gap-1 text-sm"><span className="text-muted">How it was decided (shown with the result)</span>
             <input className={input} value={manual.reason} placeholder="Judges' vote" onChange={e => setManual({ ...manual, reason: e.target.value })} /></label>
           <button className={button} disabled={!manual.id || busy} onClick={saveManual}>Save winner</button>
+          <Ballot tied={final.winner.contestantIds} judges={names.judges.filter(j => !j.guest)} name={name}
+            onResult={(id, tally) => setManual({ id, reason: `Judges' vote, ${tally}` })} />
         </div>
       )}
 
@@ -488,6 +490,36 @@ function Publish({ contestId, published, onChange }: { contestId: string; publis
       )}
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </section>
+  )
+}
+
+// Judges' vote for a tie the tiebreak steps couldn't break: one vote per panel judge, the most votes wins and fills
+// in the winner and "how it was decided" above (the producer still saves it). A tied vote says so.
+function Ballot({ tied, judges, name, onResult }: { tied: string[]; judges: Named[]; name: (id: string) => string; onResult: (id: string, tally: string) => void }) {
+  const [votes, setVotes] = useState<Record<string, string>>({})
+  const counts = tied.map(id => ({ id, n: Object.values(votes).filter(v => v === id).length })).sort((a, b) => b.n - a.n)
+  const cast = Object.values(votes).filter(Boolean).length
+  const leader = counts[0]!.n > (counts[1]?.n ?? 0) ? counts[0] : null
+  return (
+    <details className="text-sm sm:col-span-3">
+      <summary className="cursor-pointer text-accent">Record the judges' vote</summary>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        {judges.map(j => (
+          <label key={j.id} className="flex items-center justify-between gap-2">
+            <span>{j.name}</span>
+            <select className={`${input} w-auto py-1`} value={votes[j.id] ?? ''} onChange={e => setVotes({ ...votes, [j.id]: e.target.value })}>
+              <option value="">No vote</option>
+              {tied.map(id => <option key={id} value={id}>{name(id)}</option>)}
+            </select>
+          </label>
+        ))}
+      </div>
+      <p className="mt-2">
+        {cast === 0 ? 'Enter each judge\'s vote.' : leader
+          ? <>{name(leader.id)} leads {counts.map(c => c.n).join('–')}. <button className="text-accent underline" onClick={() => onResult(leader.id, counts.map(c => `${c.n} for ${name(c.id)}`).join(', '))}>Use this result</button></>
+          : <>Still tied ({counts.map(c => c.n).join('–')}).</>}
+      </p>
+    </details>
   )
 }
 

@@ -578,7 +578,7 @@
             {
               "id": "P4.2.3",
               "title": "Judges' vote ballot when tiebreaks are exhausted",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             },
             {
