@@ -5,7 +5,7 @@
 /* Layout: scoresheet-style ledger. Phase tally strip on top, then one ruled table per phase. */
 :root {
   --bg: #f6f6f8; --surface: #ffffff; --fg: #16181f; --muted: #5d6272; --rule: #dcdee6;
-  --accent: #1f3a93;          /* leather-pride royal blue */
+  --accent: #18186b; --heart: #e70039; /* Leather Pride flag: blue and the heart's red */
   --done: #1d7a4a; --prog: #b26b00; --blocked: #b3202e; --todo: #7a7f8f;
   --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --body: "IBM Plex Sans", system-ui, sans-serif;
@@ -13,17 +13,22 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #111318; --surface: #191c23; --fg: #e8e9ee; --muted: #9ba0b0; --rule: #2c3040;
-  --accent: #8ea6ff; --done: #4fc98a; --prog: #f0a940; --blocked: #ff6b78; --todo: #8a8fa0; color-scheme: dark } }
+  --accent: #a3a3ff; --heart: #ff3d68; --done: #4fc98a; --prog: #f0a940; --blocked: #ff6b78; --todo: #8a8fa0; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #111318; --surface: #191c23; --fg: #e8e9ee; --muted: #9ba0b0; --rule: #2c3040;
-  --accent: #8ea6ff; --done: #4fc98a; --prog: #f0a940; --blocked: #ff6b78; --todo: #8a8fa0; color-scheme: dark }
+  --accent: #a3a3ff; --heart: #ff3d68; --done: #4fc98a; --prog: #f0a940; --blocked: #ff6b78; --todo: #8a8fa0; color-scheme: dark }
 
-body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); margin: 0; }
+/* The flag's nine stripes, as on the site. */
+.flag-stripes { height: 18px; background: linear-gradient(#000 0 11.11%, #18186b 11.11% 22.22%, #000 22.22% 33.33%, #18186b 33.33% 44.44%, #fff 44.44% 55.55%,
+  #18186b 55.55% 66.66%, #000 66.66% 77.77%, #18186b 77.77% 88.88%, #000 88.88%); }
+h1 .tld { color: var(--heart); }
 main { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 28px; }
 h1, h2 { font-family: var(--display); letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
 h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); text-transform: uppercase; }
 h2 { font-size: 1.6rem; text-transform: uppercase; }
 .eyebrow { font: 500 .75rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+header .eyebrow { color: var(--heart); }
 header { display: grid; gap: 10px; }
 .overall { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; color: var(--muted); }
 .overall b { font: 800 2rem var(--display); color: var(--fg); font-variant-numeric: tabular-nums; }
@@ -65,10 +70,11 @@ code { font-family: var(--mono); }
 @media (prefers-reduced-motion: no-preference) { .bar span { transition: width .4s ease; } }
 </style>
 
+<div class="flag-stripes" aria-hidden="true"></div>
 <main>
   <header>
     <div class="eyebrow">Build tracker · <span id="updated">loading</span></div>
-    <h1 id="project">Tallymaster.top</h1>
+    <h1 id="project">Tallymaster<span class="tld">.top</span></h1>
     <div class="overall"><b id="pct">–</b><span id="summary">Reading build-status.json…</span></div>
     <div class="bar" id="overall-bar" aria-hidden="true"></div>
   </header>
@@ -92,7 +98,7 @@ const bar = c => { const n = Object.values(c).reduce((a, b) => a + b, 0) || 1;
 
 function render() {
   const all = data.phases.flatMap(tasksOf), c = count(all);
-  document.getElementById('project').textContent = data.project;
+  document.getElementById('project').innerHTML = esc(data.project).replace(/(\.top)$/i, '<span class="tld">$1</span>');
   document.getElementById('updated').textContent = 'updated ' + data.updated;
   document.getElementById('pct').textContent = Math.round(c.done / all.length * 100) + '%';
   document.getElementById('summary').textContent =
