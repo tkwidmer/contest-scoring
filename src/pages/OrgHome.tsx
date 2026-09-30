@@ -76,7 +76,10 @@ export function OrgHome() {
 
   return (
     <div className="grid gap-10">
-      <h1 className={h1}>{name}</h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h1 className={h1}>{name}</h1>
+        <Link to={`/org/${orgId}`} className="text-sm text-accent">Public results page →</Link>
+      </div>
 
       <section className="grid gap-3">
         <h2 className={h2}>Events</h2>

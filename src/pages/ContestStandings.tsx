@@ -152,7 +152,11 @@ export function ContestStandings() {
     .reduce((t, c) => { const p = progress(j.id, c.id); return t + p.total - p.done }, 0), 0)
 
   const finalize = () => final && window.confirm('Finalize results? Scores will be locked. You can reopen scoring later if needed.') &&
-    run(supabase.rpc('finalize_contest', { p_contest: contest.id, p_result: final as unknown as Json }))
+    run(supabase.rpc('finalize_contest', { p_contest: contest.id, p_result: {
+      ...final,
+      // Two rounds: keep the prelim placings too, so the published results can show who made the cut.
+      ...(prelim ? { prelim: { standings: prelim.standings.map(s => ({ contestantId: s.contestantId, rank: s.rank, total: s.total, pct: s.pct })) } } : {}),
+    } as unknown as Json }))
   const saveManual = () => run(supabase.from('contests')
     .update({ manual_winner_contestant_id: manual.id || null, manual_winner_reason: manual.reason.trim() || null }).eq('id', contest.id))
   const confirmCut = (ids: string[]) => window.confirm(`Confirm these ${ids.length} finalists? Finals scores open for them only.\n\n${ids.map(name).join('\n')}`) &&

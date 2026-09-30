@@ -338,13 +338,13 @@ isOneToOne: false
                   ]
                 },"published_results": {
                   Row: {
-                    "contest_id": string,"published_at": string,"published_by": string | null,"show_breakdown": boolean,"snapshot": NonNullable<Json>
+                    "contest_id": string,"org_id": string,"published_at": string,"published_by": string | null,"show_breakdown": boolean,"snapshot": NonNullable<Json>
                   }
                   Insert: {
-                    "contest_id": string,"published_at"?: string,"published_by"?: string | null,"show_breakdown": boolean,"snapshot": NonNullable<Json>
+                    "contest_id": string,"org_id": string,"published_at"?: string,"published_by"?: string | null,"show_breakdown": boolean,"snapshot": NonNullable<Json>
                   }
                   Update: {
-                    "contest_id"?: string,"published_at"?: string,"published_by"?: string | null,"show_breakdown"?: boolean,"snapshot"?: NonNullable<Json>
+                    "contest_id"?: string,"org_id"?: string,"published_at"?: string,"published_by"?: string | null,"show_breakdown"?: boolean,"snapshot"?: NonNullable<Json>
                   }
                   Relationships: [
                     {
@@ -352,6 +352,12 @@ isOneToOne: false
       columns: ["contest_id"]
 isOneToOne: true
       referencedRelation: "contests"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "published_results_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: false
+      referencedRelation: "orgs"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "published_results_published_by_fkey"
@@ -609,6 +615,9 @@ isOneToOne: false
                            },
 "set_event_approval":
 { Args: { "p_approved": boolean,"p_event": string }; Returns: undefined
+                           },
+"set_event_date":
+{ Args: { "p_date": string,"p_event": string }; Returns: undefined
                            },
 "submit_sheet":
 { Args: { "p_category": string,"p_contestant": string,"p_judge": string }; Returns: undefined

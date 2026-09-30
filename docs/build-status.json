@@ -554,7 +554,7 @@
             {
               "id": "P4.1.9",
               "title": "Publish prelim placings for two-round contests",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             }
           ]
@@ -602,7 +602,7 @@
             {
               "id": "P4.3.1",
               "title": "Judge overview with totals and Submit all",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             },
             {
@@ -620,7 +620,7 @@
             {
               "id": "P4.3.4",
               "title": "Organization public page listing published results",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             }
           ]
@@ -644,7 +644,7 @@
             {
               "id": "P4.4.3",
               "title": "Admin date editor for approved events",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             }
           ]

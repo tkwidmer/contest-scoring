@@ -43,7 +43,14 @@ export function Admin() {
             <tbody>
               {rows.map(r => (
                 <tr key={r.event_id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{r.event_name}{r.starts_on && <span className="block text-xs text-muted">{r.starts_on}</span>}</td>
+                  <td className="px-3 py-2">{r.event_name}
+                    <input type="date" aria-label={`${r.event_name} date`} defaultValue={r.starts_on ?? ''} key={r.starts_on ?? ''}
+                      className="block rounded border border-rule bg-surface px-1 text-xs text-muted"
+                      onBlur={async e => {
+                        if (!e.target.value || e.target.value === r.starts_on) return
+                        const { error } = await supabase.rpc('set_event_date', { p_event: r.event_id, p_date: e.target.value })
+                        if (error) setError(friendly(error)); else load()
+                      }} /></td>
                   <td className="px-3">{r.org_name}</td>
                   <td className="px-3 font-mono">{r.contests}</td>
                   <td className="px-3">{date(r.requested_at)}{r.requested_by_email && <a href={`mailto:${r.requested_by_email}`} className="block text-xs text-accent">{r.requested_by_email}</a>}</td>

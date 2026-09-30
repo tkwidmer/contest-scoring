@@ -113,6 +113,16 @@ export function JudgeSheet() {
     </label>
   )
 
+  const submitAll = async (who: Contestant, cats: Category[]) => {
+    if (!window.confirm(`Submit your ${cats.map(c => c.name).join(', ')} scores for ${who.display_name}? You can't change them afterwards.`)) return
+    await queue.flush()
+    for (const cat of cats) {
+      const { error } = await supabase.rpc('submit_sheet', { p_judge: me.id, p_contestant: who.id, p_category: cat.id })
+      if (error) { setError(friendly(error)); break }
+    }
+    load()
+  }
+
   const submit = async (who: Contestant, cat: Category) => {
     if (!window.confirm(`Submit your ${cat.name} scores for ${who.display_name}? You can't change them afterwards.`)) return
     await queue.flush()
@@ -198,6 +208,26 @@ export function JudgeSheet() {
                 )
               })}
               <div className={`${card} p-4`}>{commentBox(selected, null, `Overall comment for ${selected.display_name} (optional)`, !open)}</div>
+              {(() => {
+                // This contestant at a glance: the judge's own total, and every finished sheet submitted in one go.
+                const cats = mine.filter(c => scoresIn(c, selected))
+                const ks = cats.flatMap(c => c.components)
+                const val = (k: ScoreComponent) => values.get(cellKey({ judge_id: me.id, contestant_id: selected.id, component_id: k.id }))
+                const ready = cats.filter(c => !locked(selected.id, c.id) && filled(selected.id, c))
+                return (
+                  <div className={`${card} grid gap-3 p-4`}>
+                    <p className="flex justify-between gap-2 text-lg">
+                      <span>Your total for {selected.display_name}</span>
+                      <span className="font-mono font-semibold">{fmt(ks.reduce((t, k) => t + (val(k) ?? 0), 0))} / {fmt(ks.reduce((t, k) => t + k.max_points, 0))}</span>
+                    </p>
+                    {open && ready.length > 0 && (
+                      <button className={`${button} min-h-11`} onClick={() => submitAll(selected, ready)}>
+                        Submit {ready.length === 1 ? ready[0]!.name : `all ${ready.length} finished sheets`}
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
               <div className="flex justify-between gap-2">
                 <button className="min-h-11 rounded border border-rule px-4 disabled:opacity-40" disabled={idx <= 0} onClick={() => setCurrent(people[idx - 1]!.id)}>← Previous</button>
                 <button className="min-h-11 rounded border border-rule px-4 disabled:opacity-40" disabled={idx >= people.length - 1} onClick={() => setCurrent(people[idx + 1]!.id)}>Next →</button>
