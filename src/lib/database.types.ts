@@ -132,16 +132,28 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "created_at": string,"id": string,"name": string,"org_id": string,"starts_on": string | null,"venue": string | null
+                    "approval_requested_at": string | null,"approval_requested_by": string | null,"approved_at": string | null,"approved_by": string | null,"created_at": string,"id": string,"name": string,"org_id": string,"starts_on": string | null,"venue": string | null
                   }
                   Insert: {
-                    "created_at"?: string,"id"?: string,"name": string,"org_id": string,"starts_on"?: string | null,"venue"?: string | null
+                    "approval_requested_at"?: string | null,"approval_requested_by"?: string | null,"approved_at"?: string | null,"approved_by"?: string | null,"created_at"?: string,"id"?: string,"name": string,"org_id": string,"starts_on"?: string | null,"venue"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"name"?: string,"org_id"?: string,"starts_on"?: string | null,"venue"?: string | null
+                    "approval_requested_at"?: string | null,"approval_requested_by"?: string | null,"approved_at"?: string | null,"approved_by"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"org_id"?: string,"starts_on"?: string | null,"venue"?: string | null
                   }
                   Relationships: [
                     {
+      foreignKeyName: "events_approval_requested_by_fkey"
+      columns: ["approval_requested_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "events_approved_by_fkey"
+      columns: ["approved_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "events_org_id_fkey"
       columns: ["org_id"]
 isOneToOne: false
@@ -411,14 +423,25 @@ isOneToOne: false
 "create_org":
 { Args: { "p_name": string }; Returns: string
                            },
+"event_approvals":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "approved_at": string,"contests": number,"event_id": string,"event_name": string,"org_name": string,"requested_at": string,"requested_by_email": string,"starts_on": string
+            }[]
+                           },
 "finalize_contest":
 { Args: { "p_contest": string,"p_result": Json }; Returns: undefined
+                           },
+"request_event_approval":
+{ Args: { "p_event": string }; Returns: undefined
                            },
 "save_contest_as_template":
 { Args: { "p_contest": string,"p_description": string,"p_name": string,"p_visibility": string }; Returns: string
                            },
 "set_contest_status":
 { Args: { "p_contest": string,"p_status": string }; Returns: undefined
+                           },
+"set_event_approval":
+{ Args: { "p_approved": boolean,"p_event": string }; Returns: undefined
                            }
           }
           Enums: {

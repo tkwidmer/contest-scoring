@@ -46,6 +46,11 @@ Invariants the policies must keep:
 - Anonymous users can read only `published_results`, plus the contest and event names inside the snapshot. They read no live tables.
 - The public snapshot never includes contestant emails. It includes judge names only if `anonymize_comments` is false, and comments are never published.
 
+## Event approval (D25)
+- `events.approved_at/by` and `approval_requested_at/by` are not client-writable (column-level insert and update grants).
+- `request_event_approval(event)`: producers of the event's org. `set_event_approval(event, bool)` and `event_approvals()` (the queue, with the requester's email): platform admins only.
+- `set_contest_status` refuses draft → scoring while the event is unapproved. Tests: `supabase/tests/event_approval.test.sql`.
+
 ## Judge onboarding (P2)
 1. The producer adds a judge with a name and email (`user_id` null).
 2. The producer clicks **Invite**. That calls the Vercel function `api/invite-judge.ts`, which:

@@ -14,8 +14,8 @@ insert into public.orgs (id, name) values ('00000000-0000-0000-0000-0000000000a1
 insert into public.org_members (org_id, user_id, role)
 values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a11c', 'producer');
 
-insert into public.events (id, org_id, name, starts_on, venue)
-values ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000a1', 'GLL Weekend 2027', '2027-05-21', 'Hotel Ballroom');
+insert into public.events (id, org_id, name, starts_on, venue, approved_at)
+values ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000a1', 'GLL Weekend 2027', '2027-05-21', 'Hotel Ballroom', now());
 
 insert into public.contests (id, event_id, name, aggregation, threshold_pct)
 values ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000e1', 'Mr Great Lakes Leather', 'drop_high_low', 70);

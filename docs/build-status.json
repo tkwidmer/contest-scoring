@@ -351,6 +351,25 @@
               "status": "done",
               "doc": "design/04-ux-flows.md",
               "note": "Custom domain tallymaster.top not configured yet"
+            },
+            {
+              "id": "P1.6.14",
+              "title": "Printed tally: landscape summary, then a page per contestant",
+              "status": "done",
+              "doc": "design/04-ux-flows.md"
+            },
+            {
+              "id": "P1.6.15",
+              "title": "Pricing page ($100 per event, Desire Unchained fundraiser) and platform-admin event approval",
+              "status": "done",
+              "doc": "design/03-auth-rls.md"
+            },
+            {
+              "id": "P1.6.16",
+              "title": "Online payment for the event fee",
+              "status": "todo",
+              "doc": "design/00-overview.md",
+              "note": "Fee is collected by hand for now"
             }
           ]
         }

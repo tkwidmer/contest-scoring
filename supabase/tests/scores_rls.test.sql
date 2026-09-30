@@ -13,6 +13,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 select set_config('test.org', public.create_org('Great Lakes Leather')::text, true);
 insert into public.events (org_id, name) values (current_setting('test.org')::uuid, 'GLL 2027');
+reset role; update public.events set approved_at = now() where approved_at is null; set local role authenticated; -- event fee paid
 insert into public.contests (event_id, name) select id, 'Mr GLL' from public.events;
 insert into public.contests (event_id, name) select id, 'Ms GLL' from public.events;
 select set_config('test.c', (select id::text from public.contests where name = 'Mr GLL'), true);

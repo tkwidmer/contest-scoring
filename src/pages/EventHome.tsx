@@ -7,7 +7,7 @@ import { button, card, h1, h2, input, label } from '../components/ui'
 
 type Contest = { id: string; name: string; status: string }
 type Source = { value: string; label: string } // '' = blank, 'c:<id>' = copy a contest, 't:<id>' = template
-type Event = { name: string; org_id: string; starts_on: string | null; venue: string | null; orgs: { name: string } | null }
+type Event = { name: string; org_id: string; starts_on: string | null; venue: string | null; approval_requested_at: string | null; approved_at: string | null; orgs: { name: string } | null }
 
 export function EventHome() {
   const { eventId = '' } = useParams()
@@ -21,7 +21,7 @@ export function EventHome() {
 
   const load = useCallback(async () => {
     const [ev, cs] = await Promise.all([
-      supabase.from('events').select('name, org_id, starts_on, venue, orgs(name)').eq('id', eventId).maybeSingle(),
+      supabase.from('events').select('name, org_id, starts_on, venue, approval_requested_at, approved_at, orgs(name)').eq('id', eventId).maybeSingle(),
       supabase.from('contests').select('id, name, status').eq('event_id', eventId).order('created_at'),
     ])
     const failed = ev.error ?? cs.error
@@ -69,6 +69,19 @@ export function EventHome() {
         <h1 className={h1}>{event.name}</h1>
         <p className="text-muted">{[event.starts_on, event.venue].filter(Boolean).join(' · ')}</p>
       </div>
+
+      {!event.approved_at && (
+        <div role="status" className={`${card} grid gap-2 border-accent px-4 py-3`}>
+          <p><strong>This event isn't approved yet.</strong> Set up contests now; scoring opens once the $100 event fee is paid and
+            the event is approved. <Link to="/pricing" className="text-accent underline">Pricing</Link></p>
+          {event.approval_requested_at
+            ? <p className="text-sm text-muted">Approval requested {new Date(event.approval_requested_at).toLocaleDateString()}. We'll email you how to pay the fee.</p>
+            : <button className={`${button} justify-self-start`} onClick={async () => {
+                const { error } = await supabase.rpc('request_event_approval', { p_event: eventId })
+                if (error) setError(friendly(error)); else load()
+              }}>Request approval</button>}
+        </div>
+      )}
 
       <section className="grid gap-3">
         <h2 className={h2}>Contests</h2>

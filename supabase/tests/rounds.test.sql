@@ -10,6 +10,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 select set_config('test.org', public.create_org('IMBB')::text, true);
 insert into public.events (org_id, name) values (current_setting('test.org')::uuid, 'IML Weekend');
+reset role; update public.events set approved_at = now() where approved_at is null; set local role authenticated; -- event fee paid
 insert into public.contests (event_id, name, finalist_count, prelim_carries) select id, 'IMBB', 2, true from public.events;
 select set_config('test.c', (select id::text from public.contests), true);
 insert into public.categories (contest_id, name, round, sort) values
@@ -75,6 +76,7 @@ select throws_ok($$ update public.contests set finalist_count = 3 $$, 'P0001', '
 
 -- Rubric round-trip keeps rounds, category rounds and every-judge steps.
 insert into public.events (org_id, name) values (current_setting('test.org')::uuid, 'Next year');
+reset role; update public.events set approved_at = now() where approved_at is null; set local role authenticated; -- event fee paid
 select set_config('test.copy', public.clone_contest(current_setting('test.c')::uuid, (select id from public.events where name = 'Next year'), 'IMBB copy')::text, true);
 select results_eq($$ select finalist_count, prelim_carries, prelim_aggregation, (select array_agg(round order by sort) from public.categories where contest_id = c.id),
                             (select bool_and(all_judges) from public.tiebreak_steps where contest_id = c.id)

@@ -7,6 +7,8 @@ import { Layout } from './pages/Layout'
 import { Login } from './pages/Login'
 import { Home } from './pages/Home'
 import { Landing } from './pages/Landing'
+import { Pricing } from './pages/Pricing'
+import { Admin } from './pages/Admin'
 import { OrgHome } from './pages/OrgHome'
 import { EventHome } from './pages/EventHome'
 import { ContestSetup } from './pages/ContestSetup'
@@ -20,9 +22,11 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Routes>
           <Route index element={<Landing />} />
+          <Route path="/pricing" element={<Pricing />} />
           <Route path="/login" element={<Login />} />
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Home />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="/o/:orgId" element={<OrgHome />} />
             <Route path="/e/:eventId" element={<EventHome />} />
             <Route path="/c/:contestId/setup" element={<ContestSetup />} />

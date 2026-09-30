@@ -11,6 +11,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 select set_config('test.org', public.create_org('IMsLBB')::text, true);
 insert into public.events (org_id, name) values (current_setting('test.org')::uuid, 'IMsL 2027');
+reset role; update public.events set approved_at = now() where approved_at is null; set local role authenticated; -- event fee paid
 insert into public.contests (event_id, name, report_as, threshold_pct, threshold_single_only)
   select id, 'IMsL', 'average', 80, true from public.events;
 insert into public.contests (event_id, name) select id, 'IMsBB' from public.events;

@@ -19,6 +19,7 @@ insert into public.org_members (org_id, user_id, role)
 set local role authenticated;
 select lives_ok($$ insert into public.events (org_id, name) values (current_setting('test.org')::uuid, 'GLL 2027') $$,
   'producer creates an event');
+reset role; update public.events set approved_at = now() where approved_at is null; set local role authenticated; -- event fee paid
 select set_config('test.event', (select id::text from public.events where name = 'GLL 2027'), true);
 select lives_ok($$ insert into public.contests (event_id, name, threshold_pct) values (current_setting('test.event')::uuid, 'Mr GLL', 70) $$,
   'producer creates a contest');
