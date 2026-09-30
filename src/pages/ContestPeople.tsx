@@ -3,8 +3,9 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
 import { useWrites } from '../lib/useWrites'
+import { copyInvite, sendSignInLink } from '../lib/invites'
 import { ContestHeader } from '../components/ContestHeader'
-import { button, card, h2, iconButton, input, label } from '../components/ui'
+import { button, buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
 
 type Contest = { id: string; name: string; status: string; org_id: string; event_id: string; events: { name: string } | null }
 type Contestant = {
@@ -27,6 +28,7 @@ export function ContestPeople() {
   const [newContestant, setNewContestant] = useState(blankContestant)
   const [newJudge, setNewJudge] = useState(blankJudge)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   const load = useCallback(async () => {
     const [c, cs, js, rs, me] = await Promise.all([
@@ -108,6 +110,7 @@ export function ContestPeople() {
     <div className="grid gap-10">
       <ContestHeader contest={contest} />
       {error && <p role="alert" className="rounded border border-danger px-4 py-3 text-danger">{error}</p>}
+      {notice && <p role="status" className="rounded border border-accent px-4 py-3">{notice}</p>}
 
       <fieldset disabled={busy} className="grid gap-10">
         {/* ── Contestants ── */}
@@ -187,7 +190,8 @@ export function ContestPeople() {
         <section className="grid gap-3">
           <h2 className={h2}>Judges · {judges.length}</h2>
           <p className="text-sm text-muted">
-            For now you enter scores from each judge's paper sheet. Judges will be able to sign in and score for themselves later.
+            Give a judge an email and they can score on their phone: send them a sign-in link, or copy an invite to text them.
+            When they sign in with that email they see only their own sheets. Judges without an email are scored from paper.
           </p>
           {judges.length > 0 && (
             <ul className={`${card} divide-y divide-rule`}>
@@ -199,9 +203,15 @@ export function ContestPeople() {
                     <input type="checkbox" checked={j.guest} disabled={!isProducer}
                       onChange={e => run(supabase.from('judges').update({ guest: e.target.checked }).eq('id', j.id))} /> cross-panel
                   </label>
-                  <span className="font-mono text-xs text-muted">{j.user_id ? 'signed in' : 'no account'}</span>
+                  <span className="font-mono text-xs text-muted">{j.user_id ? '✓ signed in' : j.email ? 'not signed in yet' : 'paper only'}</span>
                   <span>{isProducer && draft && <button type="button" className={iconButton} aria-label={`Delete ${j.name}`}
                     onClick={() => window.confirm(`Delete judge ${j.name}?`) && run(supabase.from('judges').delete().eq('id', j.id))}>✕</button>}</span>
+                  {isProducer && j.email && !j.user_id && (
+                    <span className="flex flex-wrap gap-2 sm:col-span-5">
+                      <button type="button" className={buttonQuiet} onClick={async () => setNotice(await sendSignInLink(j.email!))}>Email a sign-in link</button>
+                      <button type="button" className={buttonQuiet} onClick={async () => setNotice(await copyInvite(j.email!, `judge ${contest?.name ?? 'a contest'} (open it under Judging to score on your phone)`))}>Copy invite</button>
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -211,7 +221,7 @@ export function ContestPeople() {
               <div className="grid gap-1"><label htmlFor="nj-name" className={label}>Judge name</label>
                 <input id="nj-name" required maxLength={120} className={input} value={newJudge.name}
                   onChange={e => setNewJudge({ ...newJudge, name: e.target.value })} /></div>
-              <div className="grid gap-1"><label htmlFor="nj-email" className={label}>Email (optional, for sign-in later)</label>
+              <div className="grid gap-1"><label htmlFor="nj-email" className={label}>Email (to score on their phone)</label>
                 <input id="nj-email" type="email" className={input} value={newJudge.email}
                   onChange={e => setNewJudge({ ...newJudge, email: e.target.value })} /></div>
               <label className="flex items-center gap-1 self-center text-sm">

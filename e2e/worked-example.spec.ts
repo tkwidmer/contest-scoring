@@ -8,17 +8,17 @@ const KEY = process.env.VITE_SUPABASE_ANON_KEY!
 const MAILPIT = 'http://127.0.0.1:54324'
 const CONTEST = '/c/00000000-0000-0000-0000-0000000000c1'
 
-async function signIn(page: Page) {
+async function signIn(page: Page, email = 'producer@test.dev', heading = 'Your organizations') {
   const api = await request.newContext()
   await api.delete(`${MAILPIT}/api/v1/messages`)
-  const otp = await api.post(`${API}/auth/v1/otp`, { headers: { apikey: KEY }, data: { email: 'producer@test.dev', create_user: false } })
+  const otp = await api.post(`${API}/auth/v1/otp`, { headers: { apikey: KEY }, data: { email, create_user: true } })
   expect(otp.ok(), await otp.text()).toBeTruthy()
   let id = ''
   await expect.poll(async () => (id = (await (await api.get(`${MAILPIT}/api/v1/messages`)).json()).messages?.[0]?.ID ?? '')).not.toBe('')
   const html: string = (await (await api.get(`${MAILPIT}/api/v1/message/${id}`)).json()).HTML
   await page.goto(html.match(/href="([^"]+)"/)![1]!.replace(/&amp;/g, '&'))
   await page.getByRole('link', { name: 'Dashboard' }).click() // the link lands on the home page; its banner links to the dashboard
-  await expect(page.getByRole('heading', { name: 'Your organizations' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: heading })).toBeVisible()
 }
 
 async function setScore(page: Page, judge: string, contestant: string, component: string, value: string) {
@@ -61,4 +61,25 @@ test('worked example: tiebreak, score entry and finalize', async ({ page }) => {
   await page.goto(`${CONTEST}/standings`)
   await page.getByRole('button', { name: 'Reopen scoring' }).click()
   await expect(page.getByRole('button', { name: 'Finalize results' })).toBeVisible()
+})
+
+// P2: a judge signs in with the email on their seat, scores only their own sheet and submits it; the sheet locks
+// until a producer unlocks it with a reason. Ends unlocked, as the seed has it.
+test('judge submits a sheet; producer unlocks it', async ({ browser }) => {
+  const judge = await (await browser.newContext()).newPage()
+  judge.on('dialog', d => d.accept())
+  await signIn(judge, 'judge1@test.dev', 'Judging')
+  await judge.getByRole('link', { name: /Mr Great Lakes Leather/ }).click()
+  await expect(judge.getByText('Judging as J1')).toBeVisible()
+  await judge.getByRole('button', { name: 'Submit Speech' }).click()
+  await expect(judge.getByText('🔒 Submitted')).toBeVisible()
+  await expect(judge.getByRole('textbox', { name: 'Content' })).toBeDisabled()
+
+  const producer = await (await browser.newContext()).newPage()
+  producer.on('dialog', d => d.accept('Wrong contestant'))
+  await signIn(producer)
+  await producer.goto(`${CONTEST}/scores`)
+  await expect(producer.getByText('🔒 Submitted')).toBeVisible()
+  await producer.getByRole('button', { name: 'Unlock' }).click()
+  await expect(producer.getByRole('button', { name: 'Submit for J1' })).toHaveCount(3)
 })

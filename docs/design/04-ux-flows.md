@@ -15,8 +15,8 @@ The producer UI is built for desktop and tablet first, because it's often used o
 | `/c/:contest/enter` | P, T | Score entry (3 views) |
 | `/c/:contest/standings` | P, T | Standings, projected winner, judge progress |
 | `/c/:contest/comments` | P | Review, edit and approve comments, then export |
-| `/judge` | J | My contests |
-| `/judge/c/:contest` | J | My sheets for that contest |
+| `/dashboard` | all | Judging (my seats), then my organizations |
+| `/judge/:contest` | J | My sheets for that contest |
 | `/r/:contest` | public | Published results |
 
 ## Flows
@@ -65,8 +65,8 @@ Common behavior:
 - A printable tally sheet (browser print CSS) serves as the paper backup.
 
 ### 5. Judge (P2)
-- `/judge` lists assigned contests.
-- `/judge/c/:contest` shows cards for each contestant × category with a status (not started, draft, submitted).
+- The dashboard lists assigned contests under **Judging**.
+- `/judge/:contest` has a row of contestant buttons (✓ when all their sheets are submitted), then one card per category with a status (not finished, ready to submit, submitted, reopened with the producer's reason). Comments arrive in P3.
 - Opening a sheet shows the components, with large tap-friendly steppers or number inputs, and a comment box (per category or overall).
 - **Submit** first confirms the entries, then locks the sheet.
 - Judges never see totals from other judges.

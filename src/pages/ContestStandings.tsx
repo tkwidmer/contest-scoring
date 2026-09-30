@@ -36,9 +36,10 @@ export function ContestStandings() {
   const [manual, setManual] = useState({ id: '', reason: '' })
   const [error, setError] = useState('')
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [submitted, setSubmitted] = useState<Set<string>>(new Set()) // judge|contestant|category
 
   const load = useCallback(async () => {
-    const [c, cats, cs, js, rs, sc, ts, pn, fr] = await Promise.all([
+    const [c, cats, cs, js, rs, sc, ts, pn, fr, sub] = await Promise.all([
       supabase.from('contests').select('id, name, status, event_id, events(name), aggregation, threshold_pct, manual_winner_contestant_id, manual_winner_reason, finalized_at, finalist_count, prelim_aggregation, prelim_carries, finalists_confirmed_at, report_as, threshold_single_only')
         .eq('id', contestId).maybeSingle(),
       supabase.from('categories').select('id, name, round, scored_by, guest_average, deductions, components(id, min_points, max_points, step)')
@@ -51,11 +52,13 @@ export function ContestStandings() {
       supabase.from('penalties').select('contestant_id, category_id, tier').eq('contest_id', contestId),
       // The frozen result holds every judge's scores, so it's only readable through this members-only RPC.
       supabase.rpc('contest_final_result', { p_contest: contestId }),
+      supabase.from('sheet_submissions').select('judge_id, contestant_id, category_id').eq('contest_id', contestId).is('unlocked_at', null),
     ])
-    const failed = c.error ?? cats.error ?? cs.error ?? js.error ?? rs.error ?? sc.error ?? ts.error ?? pn.error ?? fr.error
+    const failed = c.error ?? cats.error ?? cs.error ?? js.error ?? rs.error ?? sc.error ?? ts.error ?? pn.error ?? fr.error ?? sub.error
     if (failed) return setError(friendly(failed))
     if (!c.data) return setError("This contest doesn't exist, or you're not a member of its organization.")
     setContest({ ...c.data, final_result: fr.data })
+    setSubmitted(new Set((sub.data ?? []).map(x => `${x.judge_id}|${x.contestant_id}|${x.category_id}`)))
     setInput({
       aggregation: c.data.aggregation as Aggregation,
       thresholdPct: c.data.threshold_pct,
@@ -118,16 +121,18 @@ export function ContestStandings() {
     const guest = names.judges.find(j => j.id === judgeId)?.guest
     const fills = judgeId === PRODUCER ? cat.scored_by === 'producer'
       : cat.scored_by === 'cross_panel' ? guest : cat.scored_by === 'judges' && (!guest || cat.guest_average)
-    if (!fills) return { done: 0, total: 0 }
+    if (!fills) return { done: 0, total: 0, sheets: 0, locked: 0 }
     const comps = input_.categories.find(c => c.id === catId)!.components
     const who = hasRounds && cat.round === 'final' ? active.filter(c => confirmed.includes(c.id)) : active
     const key = judgeId === PRODUCER ? 'null' : judgeId
-    let done = 0, total = 0
+    let done = 0, total = 0, sheets = 0, locked = 0
     for (const c of who) {
       if (recused.has(`${judgeId}|${c.id}`)) continue
+      sheets++
+      if (submitted.has(`${judgeId}|${c.id}|${catId}`)) locked++
       for (const k of comps) { total++; if (entered.has(`${key}|${c.id}|${k.id}`)) done++ }
     }
-    return { done, total }
+    return { done, total, sheets, locked }
   }
   const missingIn = (round?: string) => fillers.reduce((s, j) => s + names.categories
     .filter(c => !round || !hasRounds || c.round === round)
@@ -265,6 +270,7 @@ export function ContestStandings() {
 
       <section className="grid gap-2 print:hidden">
         <h2 className={h2}>Judge progress</h2>
+        <p className="text-xs text-muted">✓ every score entered · entered/expected otherwise · 🔒 sheets the judge has submitted</p>
         <div className={`${card} overflow-x-auto`}>
           <table className="text-sm">
             <thead><tr className="border-b border-rule text-muted"><th className="px-3 py-2 text-left font-normal">Judge</th>
@@ -276,7 +282,8 @@ export function ContestStandings() {
                   {names.categories.map(c => {
                     const p = progress(j.id, c.id)
                     return <td key={c.id} className={`px-3 text-center font-mono ${p.done === p.total ? 'text-muted' : ''}`}>
-                      {p.total === 0 ? '–' : p.done === p.total ? '✓' : `${p.done}/${p.total}`}</td>
+                      {p.total === 0 ? '–' : p.done === p.total ? '✓' : `${p.done}/${p.total}`}
+                      {p.locked > 0 && <span className="block text-xs text-muted" title="Sheets the judge has submitted">🔒 {p.locked}/{p.sheets}</span>}</td>
                   })}
                 </tr>
               ))}

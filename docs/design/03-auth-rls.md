@@ -51,16 +51,17 @@ Invariants the policies must keep:
 - `request_event_approval(event)`: producers of the event's org. `set_event_approval(event, bool)` and `event_approvals()` (the queue, with the requester's email): platform admins only.
 - `set_contest_status` refuses draft → scoring while the event is unapproved, or outside 14 days either side of its date (the approval date for events approved before dates were required). `request_event_approval` needs a date; a trigger locks `starts_on` while approved. Tests: `supabase/tests/event_approval.test.sql`.
 
-## Judge onboarding (P2)
-1. The producer adds a judge with a name and email (`user_id` null).
-2. The producer clicks **Invite**. That calls the Vercel function `api/invite-judge.ts`, which:
-   - verifies the caller's JWT with `auth.getUser()`,
-   - checks that the caller is a producer of the contest's org,
-   - then calls `auth.admin.inviteUserByEmail`.
+## Judge and member onboarding (P2, D26)
+No server function: invites are stored against an email and claimed when that person signs in.
+1. The producer gives a judge an email on the People tab (`judges.email`, `user_id` null), or invites a producer or tabulator on the organization page (`org_invites`: org, email, role; producers only).
+2. The producer clicks **Email a sign-in link** (an ordinary `signInWithOtp`, which also creates the account) or **Copy invite** to text it.
+3. The person signs in with an OTP to that email. The dashboard calls `claim_invites()`, which sets `judges.user_id = auth.uid()` where `lower(email) = lower(auth.email())` (one seat per contest) and turns matching `org_invites` into `org_members`. Safe because the OTP just verified the email.
+4. The dashboard lists **Judging** (seats) above **Your organizations**. `/judge/:contest` is the judge's own sheet.
 
-   As a fallback, the producer can copy an invite message with a link to the app.
-3. The judge signs in with an OTP sent to that email. On login the app calls the RPC `claim_judge_seats()`. That function sets `judges.user_id = auth.uid()` wherever `lower(judges.email) = lower(auth.email())` and `user_id is null`. This is safe because the email was just verified by the OTP.
-4. The judge dashboard lists the contests where `judges.user_id = auth.uid()`.
+## Sheets (P2)
+- A sheet is one judge × contestant × category. `submit_sheet` (the judge, or a producer/tabulator on their behalf) needs every component scored, then locks it; `validate_score` rejects any write to a locked sheet, from anyone. `unlock_sheet` is producers only and needs a reason. Both are logged in `sheet_audit` (producers read it).
+- Judges read and write only their own scores (`private.is_own_judge`). They can't read `contests.final_result` (it holds every judge's scores); org members read it with `contest_final_result()`.
+- Tests: `supabase/tests/judges_score.test.sql`.
 
 ## Audit & integrity
 - The `score_audit` trigger fires on insert, update and delete of `scores`. It records `auth.uid()` together with the old and new values.

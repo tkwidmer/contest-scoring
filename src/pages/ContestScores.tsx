@@ -36,11 +36,12 @@ export function ContestScores() {
   const [judgeId, setJudgeId] = useState('')
   const [contestantId, setContestantId] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [locks, setLocks] = useState<Set<string>>(new Set()) // judge|contestant|category of submitted sheets
   const queue = useMemo(() => createSaveQueue({ storageKey: `scores:${contestId}`, send: sendCell }), [contestId])
   const [sync, setSync] = useState<QueueState>({ pending: 0, failing: new Map(), offline: false })
 
   const load = useCallback(async () => {
-    const [c, cats, cs, js, rs, sc, pn] = await Promise.all([
+    const [c, cats, cs, js, rs, sc, pn, sub] = await Promise.all([
       supabase.from('contests').select('id, name, status, event_id, events(name), finalist_count').eq('id', contestId).maybeSingle(),
       supabase.from('categories').select('id, name, round, scored_by, guest_average, deductions, components(id, name, min_points, max_points, step)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
@@ -49,13 +50,15 @@ export function ContestScores() {
       supabase.from('recusals').select('judge_id, contestant_id, judges!inner(contest_id)').eq('judges.contest_id', contestId),
       supabase.from('scores').select('judge_id, contestant_id, component_id, value').eq('contest_id', contestId),
       supabase.from('penalties').select('id, contestant_id, category_id, tier').eq('contest_id', contestId),
+      supabase.from('sheet_submissions').select('judge_id, contestant_id, category_id').eq('contest_id', contestId).is('unlocked_at', null),
     ])
-    const failed = c.error ?? cats.error ?? cs.error ?? js.error ?? rs.error ?? sc.error ?? pn.error
+    const failed = c.error ?? cats.error ?? cs.error ?? js.error ?? rs.error ?? sc.error ?? pn.error ?? sub.error
     if (failed) return setError(friendly(failed))
     if (!c.data) return setError("This contest doesn't exist, or you're not a member of its organization.")
     setContest(c.data)
     setCategories((cats.data ?? []).map(x => ({ ...x, deductions: x.deductions as Deduction[] })))
     setPenalties(pn.data ?? [])
+    setLocks(new Set((sub.data ?? []).map(x => `${x.judge_id}|${x.contestant_id}|${x.category_id}`)))
     setContestants((cs.data ?? []).map(x => ({ id: x.id, name: x.number != null ? `${x.number} · ${x.display_name}` : x.display_name })))
     setJudges(js.data ?? [])
     setFinalists(new Set((cs.data ?? []).filter(x => x.finalist).map(x => x.id)))
@@ -105,12 +108,25 @@ export function ContestScores() {
     const judge_id = judgeIdOf(key)
     const cellK = cellKey({ judge_id, contestant_id, component_id: k.id })
     return {
-      k, label, editable, recused: recused.has(`${judge_id}|${contestant_id}`),
+      k, label, recused: recused.has(`${judge_id}|${contestant_id}`),
+      editable: editable && !locks.has(`${judge_id}|${contestant_id}|${catOf.get(k.id)!.id}`),
       notFinalist: finalsOnly(catOf.get(k.id)!) && !finalists.has(contestant_id),
       notScored: !scores(key, catOf.get(k.id)!),
       value: values.get(cellK) ?? null, serverError: sync.failing.get(cellK),
       onCommit: (value: number | null) => commit({ judge_id, contestant_id, component_id: k.id, value }),
     }
+  }
+  // Sheets: a producer or tabulator can submit for a judge (e.g. from paper); only a producer can unlock, with a reason.
+  const submitFor = async (cat: Category) => {
+    await queue.flush()
+    const { error } = await supabase.rpc('submit_sheet', { p_judge: judgeId, p_contestant: contestantId, p_category: cat.id })
+    if (error) setError(friendly(error)); else load()
+  }
+  const unlock = async (cat: Category) => {
+    const reason = window.prompt(`Why are you unlocking ${nameOf(judges, judgeId)}'s ${cat.name} sheet for ${nameOf(contestants, contestantId)}? This is logged.`)
+    if (reason == null) return
+    const { error } = await supabase.rpc('unlock_sheet', { p_judge: judgeId, p_contestant: contestantId, p_category: cat.id, p_reason: reason })
+    if (error) setError(friendly(error)); else load()
   }
   const sheetTotal = (key: string, contestant_id: string, ks: Component[]) =>
     ks.reduce((s, k) => s + (values.get(cellKey({ judge_id: judgeIdOf(key), contestant_id, component_id: k.id })) ?? 0), 0)
@@ -168,7 +184,11 @@ export function ContestScores() {
             <table className="w-full text-sm">
               <tbody>
                 {categories.filter(cat => scores(judgeId, cat)).map(cat => (
-                  <CategoryRows key={cat.id} cat={cat} total={sheetTotal(judgeId, contestantId, cat.components)}>
+                  <CategoryRows key={cat.id} cat={cat} total={sheetTotal(judgeId, contestantId, cat.components)}
+                    status={judgeId === PRODUCER || recused.has(`${judgeId}|${contestantId}`) ? undefined
+                      : locks.has(`${judgeId}|${contestantId}|${cat.id}`)
+                        ? <>🔒 Submitted {editable && <button className="ml-2 text-accent underline" onClick={() => unlock(cat)}>Unlock</button>}</>
+                        : editable && <button className="text-accent underline" onClick={() => submitFor(cat)}>Submit for {nameOf(judges, judgeId)}</button>}>
                     {cat.components.map(k => (
                       <tr key={k.id}>
                         <td className="px-3 py-1.5 pl-6">{k.name} <span className="text-xs text-muted">/ {fmt(k.max_points)}</span></td>
@@ -281,11 +301,12 @@ export function ContestScores() {
   )
 }
 
-function CategoryRows({ cat, total, span = 1, children }: { cat: Category; total?: number; span?: number; children: React.ReactNode }) {
+function CategoryRows({ cat, total, span = 1, status, children }: { cat: Category; total?: number; span?: number; status?: React.ReactNode; children: React.ReactNode }) {
   return <>
     <tr className="border-t border-rule bg-bg">
       <th colSpan={span + 1} className="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-muted">
         {cat.name}{total !== undefined && <span className="float-right font-mono normal-case">{fmt(total)}</span>}
+        {status && <span className="ml-3 font-normal normal-case tracking-normal">{status}</span>}
       </th>
     </tr>
     {children}

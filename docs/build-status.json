@@ -392,14 +392,14 @@
           "tasks": [
             {
               "id": "P2.1.1",
-              "title": "api/invite-judge.ts + claim_judge_seats RPC",
-              "status": "todo",
+              "title": "Judge invites and claim_invites RPC (no server function, D26)",
+              "status": "done",
               "doc": "design/03-auth-rls.md"
             },
             {
               "id": "P2.1.2",
               "title": "Tabulator role + member management",
-              "status": "todo",
+              "status": "done",
               "doc": "design/03-auth-rls.md"
             },
             {
@@ -407,7 +407,7 @@
               "title": "Custom SMTP for auth email",
               "status": "todo",
               "doc": "design/03-auth-rls.md",
-              "note": "Required before anyone but you can sign in (default sender only emails the Supabase team). Also enables the 6-digit code template"
+              "note": "Needs DNS for tallymaster.top and an email provider; until then only the Supabase team can receive sign-in emails on production"
             }
           ]
         },
@@ -418,19 +418,19 @@
             {
               "id": "P2.2.1",
               "title": "Judge dashboard + mobile sheet entry",
-              "status": "todo",
+              "status": "done",
               "doc": "design/04-ux-flows.md"
             },
             {
               "id": "P2.2.2",
               "title": "Submit/lock, producer unlock with reason",
-              "status": "todo",
+              "status": "done",
               "doc": "design/01-domain-model.md"
             },
             {
               "id": "P2.2.3",
               "title": "Judge progress panel",
-              "status": "todo",
+              "status": "done",
               "doc": "design/04-ux-flows.md"
             }
           ]

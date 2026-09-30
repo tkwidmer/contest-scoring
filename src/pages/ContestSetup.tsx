@@ -30,11 +30,12 @@ export function ContestSetup() {
   const [steps, setSteps] = useState<Step[]>([])
   const [tpl, setTpl] = useState<{ name: string; description: string; visibility: string; saved: string }>({ name: '', description: '', visibility: 'private', saved: '' })
   const [error, setError] = useState('')
+  const [isProducer, setIsProducer] = useState(false)
 
   const load = useCallback(async () => {
     const [c, cats, st] = await Promise.all([
       supabase.from('contests')
-        .select('id, name, status, aggregation, threshold_pct, anonymize_comments, event_id, events(name), finalist_count, prelim_aggregation, prelim_carries, report_as, threshold_single_only')
+        .select('id, name, status, org_id, aggregation, threshold_pct, anonymize_comments, event_id, events(name), finalist_count, prelim_aggregation, prelim_carries, report_as, threshold_single_only')
         .eq('id', contestId).maybeSingle(),
       supabase.from('categories')
         .select('id, name, sort, drop_rank, round, scored_by, guest_average, deductions, components(id, name, min_points, max_points, step, sort)')
@@ -45,6 +46,9 @@ export function ContestSetup() {
     if (failed) return setError(friendly(failed))
     if (!c.data) return setError("This contest doesn't exist, or you're not a member of its organization.")
     setContest(c.data)
+    const uid = (await supabase.auth.getUser()).data.user?.id ?? ''
+    const role = await supabase.from('org_members').select('role').eq('org_id', c.data.org_id).eq('user_id', uid).maybeSingle()
+    setIsProducer(role.data?.role === 'producer')
     setCategories((cats.data ?? []).map(c => ({ ...c, deductions: c.deductions as Deduction[] })))
     setSteps(st.data ?? [])
   }, [contestId])
@@ -56,7 +60,7 @@ export function ContestSetup() {
 
   if (!contest) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
-  const locked = contest.status !== 'draft'
+  const locked = contest.status !== 'draft' || !isProducer // tabulators see the setup read-only
   const rounds = contest.finalist_count != null
   const catMax = (c: Category) => c.components.reduce((t, k) => t + k.max_points, 0)
   const judged = categories.filter(c => c.scored_by === 'judges') // producer-entered categories aren't per judge
