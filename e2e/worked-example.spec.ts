@@ -98,7 +98,7 @@ test('comment, approve, publish, public page', async ({ browser }) => {
   producer.on('dialog', d => d.accept())
   await signIn(producer)
   await producer.goto(`${CONTEST}/comments`)
-  await expect(producer.getByText('Great stage presence.')).toBeVisible()
+  await expect(producer.getByRole('textbox', { name: /Shared version of J1's Overall comment/ })).toHaveValue('Great stage presence.')
   await producer.getByRole('checkbox', { name: 'Approved' }).first().check()
   await expect(producer.getByText(/1 approved/)).toBeVisible()
 
