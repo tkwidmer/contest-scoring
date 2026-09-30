@@ -91,14 +91,20 @@ export function Pricing() {
               </li>
             ))}
           </ol>
-          <dl className="grid gap-5 md:grid-cols-2">
-            {faq.map(([q, a]) => (
-              <div key={q} className="grid content-start gap-1">
-                <dt className="font-semibold">{q}</dt>
-                <dd className="text-muted">{a}</dd>
-              </div>
-            ))}
-          </dl>
+        </section>
+
+        <section className="border-t border-rule bg-surface">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14">
+            <h2 className="font-display text-3xl font-extrabold uppercase sm:text-4xl">Questions</h2>
+            <dl className="grid gap-4 md:grid-cols-2">
+              {faq.map(([q, a]) => (
+                <div key={q} className={`${card} grid content-start gap-2 bg-bg p-5`}>
+                  <dt className="text-lg font-semibold">{q}</dt>
+                  <dd className="text-muted">{a}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         </section>
       </main>
       <PublicFooter />

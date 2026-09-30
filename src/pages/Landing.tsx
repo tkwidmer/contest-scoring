@@ -8,6 +8,10 @@ const ctaQuiet = 'inline-block rounded border border-rule px-5 py-2.5 font-mediu
 
 const features: { title: string; body: string }[] = [
   {
+    title: 'Judges score on their phones',
+    body: 'Judges sign in on their phone, score their own sheets and submit them. No paper to collect, no numbers to retype, and they only ever see their own scores.',
+  },
+  {
     title: 'Instant tallying',
     body: 'Standings update with every score. When the last judge’s score is in, so is the result: highs and lows dropped, deductions applied, tiebreaks run. No hour-long wait while tally checks and re-checks.',
   },
@@ -24,19 +28,15 @@ const features: { title: string; body: string }[] = [
     body: 'Every entry and every change is recorded with who made it and when. Recused judges are handled by the rules, not by hand, and a finalized result is locked.',
   },
   {
-    title: 'Judges score on the website',
-    body: 'Judges sign in on their phone, score their own sheets and submit them. No paper to collect, no numbers to retype, and they only ever see their own scores.',
-  },
-  {
     title: 'Transparent results',
     body: 'Publish the final results to a public page for contestants and the community, with each category’s scores, and share judges’ reviewed comments with each contestant.',
   },
 ]
 
 const steps = [
-  ['Set up', 'Start from an official template (IML, IMBB, IMsL, IMsBB, San Diego, SF Bootblack) or build your own categories, scoring and tiebreaks. Add contestants and judges.'],
-  ['Score', 'Enter scores by judge sheet, by category or by contestant, on a laptop or phone. Every score saves as it’s typed and survives a patchy hotel Wi-Fi.'],
-  ['Crown', 'Watch the standings and the projected winner build. When scoring is done, finalize, print the tally sheet and announce with confidence.'],
+  ['Set up', 'Start from an official template (IML, IMBB, IMsL, IMsBB, San Diego, SF Bootblack) or build your own categories, scoring and tiebreaks. Add your contestants and invite each judge by email.'],
+  ['Judges score', 'Judges sign in on their own phones, score each contestant category by category, add comments and submit. A submitted sheet locks. Scores save as they’re typed and survive patchy hotel Wi-Fi, and the tally team can still enter paper sheets.'],
+  ['Crown', 'Standings update live as sheets come in. When the last one lands, finalize, print the tally, publish the results page and share each contestant’s reviewed comments.'],
 ]
 
 function Shot({ name, alt, className = '' }: { name: string; alt: string; className?: string }) {
@@ -98,14 +98,14 @@ export function Landing() {
               </li>
             ))}
           </ol>
-          <div className="grid items-start gap-8 md:grid-cols-[3fr_1fr]">
-            <figure className="grid gap-2">
-              <Shot name="score-entry" alt="Score entry grid for a fictional contest: contestants down the side, judges across the top, with every score saved" />
-              <figcaption className="text-sm text-muted">Enter a whole category at once: contestants down the side, judges across the top.</figcaption>
-            </figure>
+          <div className="grid items-start gap-8 md:grid-cols-[1fr_3fr]">
             <figure className="mx-auto grid max-w-64 gap-2">
-              <Shot name="phone" alt="One judge's scoresheet on a phone" className="rounded-2xl" />
-              <figcaption className="text-sm text-muted">Every view works on a phone.</figcaption>
+              <Shot name="judge-phone" alt="A judge's own scoresheet on a phone, with submitted categories locked" className="rounded-2xl" />
+              <figcaption className="text-sm text-muted">Each judge scores on their own phone and sees only their own scores.</figcaption>
+            </figure>
+            <figure className="grid gap-2">
+              <Shot name="results" alt="The public results page for a fictional contest: the winner and the full standings by category" />
+              <figcaption className="text-sm text-muted">Publish the results to a public page anyone can open, no sign-in needed.</figcaption>
             </figure>
           </div>
         </section>
