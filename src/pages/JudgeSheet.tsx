@@ -67,8 +67,17 @@ export function JudgeSheet() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState runs after the awaits
   useEffect(() => { load() }, [load])
-  useEffect(() => queue.subscribe(setSaving), [queue])
-  useEffect(() => () => queue.dispose(), [queue])
+  // Same resilience as the producer's score entry: retry as soon as the phone is back online, warn before closing
+  // with unsaved scores, and send anything left over from the last visit.
+  useEffect(() => {
+    const unsubscribe = queue.subscribe(setSaving)
+    const retry = () => queue.flush()
+    const warn = (e: BeforeUnloadEvent) => { if (queue.pendingValues().size) e.preventDefault() }
+    window.addEventListener('online', retry)
+    window.addEventListener('beforeunload', warn)
+    queue.flush()
+    return () => { unsubscribe(); queue.dispose(); window.removeEventListener('online', retry); window.removeEventListener('beforeunload', warn) }
+  }, [queue])
 
   if (!contest || !me) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 

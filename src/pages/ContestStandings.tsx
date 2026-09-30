@@ -89,6 +89,19 @@ export function ContestStandings() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState runs after the awaits
   useEffect(() => { load() }, [load])
 
+  // Live updates: judges score on their own phones, so reload (debounced) whenever a score, sheet or deduction
+  // for this contest changes. Realtime applies the same RLS as reads. Refresh stays as a fallback.
+  const [streaming, setStreaming] = useState(false)
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const soon = () => { clearTimeout(timer); timer = setTimeout(load, 500) }
+    const filter = `contest_id=eq.${contestId}`
+    const channel = supabase.channel(`standings:${contestId}`)
+    for (const table of ['scores', 'sheet_submissions', 'penalties']) channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, soon)
+    channel.subscribe(status => setStreaming(status === 'SUBSCRIBED'))
+    return () => { clearTimeout(timer); supabase.removeChannel(channel) }
+  }, [contestId, load])
+
   const { busy, run } = useWrites(load, setError)
 
   if (!contest || !input_ || !names) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
@@ -210,7 +223,7 @@ export function ContestStandings() {
 
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         <button className={buttonQuiet} disabled={busy} onClick={() => load()}>Refresh</button>
-        <span className="text-xs text-muted">{loadedAt && `Updated ${loadedAt.toLocaleTimeString()}`}</span>
+        <span className="text-xs text-muted">{streaming && '● Live · '}{loadedAt && `Updated ${loadedAt.toLocaleTimeString()}`}</span>
         <span className="flex-1" />
         <button className={buttonQuiet} onClick={() => window.print()}>Print tally</button>
         {contest.status === 'scoring' && final && (final.winner.kind === 'decided' || final.winner.kind === 'no_title') && (

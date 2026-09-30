@@ -5,6 +5,7 @@ import { friendly } from '../lib/errors'
 import { generateTiebreakSteps } from '../lib/scoring'
 import { useWrites } from '../lib/useWrites'
 import { ContestHeader } from '../components/ContestHeader'
+import { useContestRole } from '../lib/useContestRole'
 import { buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
 
 type Component = { id: string; name: string; min_points: number; max_points: number; step: number; sort: number }
@@ -30,7 +31,8 @@ export function ContestSetup() {
   const [steps, setSteps] = useState<Step[]>([])
   const [tpl, setTpl] = useState<{ name: string; description: string; visibility: string; saved: string }>({ name: '', description: '', visibility: 'private', saved: '' })
   const [error, setError] = useState('')
-  const [isProducer, setIsProducer] = useState(false)
+  const role = useContestRole(contestId)
+  const isProducer = role === 'producer'
 
   const load = useCallback(async () => {
     const [c, cats, st] = await Promise.all([
@@ -46,9 +48,6 @@ export function ContestSetup() {
     if (failed) return setError(friendly(failed))
     if (!c.data) return setError("This contest doesn't exist, or you're not a member of its organization.")
     setContest(c.data)
-    const uid = (await supabase.auth.getUser()).data.user?.id ?? ''
-    const role = await supabase.from('org_members').select('role').eq('org_id', c.data.org_id).eq('user_id', uid).maybeSingle()
-    setIsProducer(role.data?.role === 'producer')
     setCategories((cats.data ?? []).map(c => ({ ...c, deductions: c.deductions as Deduction[] })))
     setSteps(st.data ?? [])
   }, [contestId])
@@ -118,6 +117,7 @@ export function ContestSetup() {
   return (
     <div className="grid gap-10">
       <ContestHeader contest={contest} />
+      {role === 'tabulator' && <p className="rounded border border-rule px-4 py-2 text-sm text-muted">Read-only: only producers change a contest's setup.</p>}
 
       <div className={`${card} flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
         <p>

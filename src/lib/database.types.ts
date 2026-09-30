@@ -169,13 +169,13 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "approval_requested_at": string | null,"approval_requested_by": string | null,"approved_at": string | null,"approved_by": string | null,"created_at": string,"id": string,"name": string,"org_id": string,"starts_on": string | null,"venue": string | null
+                    "approval_requested_at": string | null,"approval_requested_by": string | null,"approved_at": string | null,"approved_by": string | null,"archived_at": string | null,"created_at": string,"id": string,"name": string,"org_id": string,"starts_on": string | null,"venue": string | null
                   }
                   Insert: {
-                    "approval_requested_at"?: string | null,"approval_requested_by"?: string | null,"approved_at"?: string | null,"approved_by"?: string | null,"created_at"?: string,"id"?: string,"name": string,"org_id": string,"starts_on"?: string | null,"venue"?: string | null
+                    "approval_requested_at"?: string | null,"approval_requested_by"?: string | null,"approved_at"?: string | null,"approved_by"?: string | null,"archived_at"?: string | null,"created_at"?: string,"id"?: string,"name": string,"org_id": string,"starts_on"?: string | null,"venue"?: string | null
                   }
                   Update: {
-                    "approval_requested_at"?: string | null,"approval_requested_by"?: string | null,"approved_at"?: string | null,"approved_by"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"org_id"?: string,"starts_on"?: string | null,"venue"?: string | null
+                    "approval_requested_at"?: string | null,"approval_requested_by"?: string | null,"approved_at"?: string | null,"approved_by"?: string | null,"archived_at"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"org_id"?: string,"starts_on"?: string | null,"venue"?: string | null
                   }
                   Relationships: [
                     {

@@ -83,3 +83,36 @@ test('judge submits a sheet; producer unlocks it', async ({ browser }) => {
   await producer.getByRole('button', { name: 'Unlock' }).click()
   await expect(producer.getByRole('button', { name: 'Submit for J1' })).toHaveCount(3)
 })
+
+// P3: a judge's comment is approved on the Comments tab, the result is published, and the public page shows it
+// without signing in. Ends unpublished and back in scoring, as the seed has it.
+test('comment, approve, publish, public page', async ({ browser }) => {
+  const judge = await (await browser.newContext()).newPage()
+  await signIn(judge, 'judge1@test.dev', 'Judging')
+  await judge.getByRole('link', { name: /Mr Great Lakes Leather/ }).click()
+  await judge.getByLabel(/Overall comment for/).fill('Great stage presence.')
+  await judge.getByLabel(/Overall comment for/).blur()
+  await expect(judge.getByRole('alert')).toHaveCount(0)
+
+  const producer = await (await browser.newContext()).newPage()
+  producer.on('dialog', d => d.accept())
+  await signIn(producer)
+  await producer.goto(`${CONTEST}/comments`)
+  await expect(producer.getByText('Great stage presence.')).toBeVisible()
+  await producer.getByRole('checkbox', { name: 'Approved' }).first().check()
+  await expect(producer.getByText(/1 approved/)).toBeVisible()
+
+  await producer.goto(`${CONTEST}/standings`)
+  await producer.getByRole('button', { name: 'Finalize results' }).click()
+  await producer.getByRole('button', { name: 'Publish results' }).click()
+  await expect(producer.getByText('Published at')).toBeVisible()
+
+  const visitor = await (await browser.newContext()).newPage()
+  await visitor.goto(`/r/${CONTEST.split('/').pop()}`)
+  await expect(visitor.locator('p', { hasText: 'Winner:' })).toContainText('B')
+  await expect(visitor.getByText('Great stage presence.')).toHaveCount(0) // comments are never public
+
+  await producer.getByRole('button', { name: 'Unpublish' }).click()
+  await producer.getByRole('button', { name: 'Reopen scoring' }).click()
+  await expect(producer.getByRole('button', { name: 'Finalize results' })).toBeVisible()
+})

@@ -3,11 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { TablesInsert } from '../lib/database.types'
 import { friendly } from '../lib/errors'
-import { button, card, h1, h2, input, label } from '../components/ui'
+import { button, buttonQuiet, card, h1, h2, iconButton, input, label } from '../components/ui'
 
 type Contest = { id: string; name: string; status: string }
 type Source = { value: string; label: string } // '' = blank, 'c:<id>' = copy a contest, 't:<id>' = template
-type Event = { name: string; org_id: string; starts_on: string | null; venue: string | null; approval_requested_at: string | null; approved_at: string | null; orgs: { name: string } | null }
+type Event = { name: string; org_id: string; starts_on: string | null; venue: string | null; approval_requested_at: string | null; approved_at: string | null; archived_at: string | null; orgs: { name: string } | null }
 
 export function EventHome() {
   const { eventId = '' } = useParams()
@@ -21,7 +21,7 @@ export function EventHome() {
 
   const load = useCallback(async () => {
     const [ev, cs] = await Promise.all([
-      supabase.from('events').select('name, org_id, starts_on, venue, approval_requested_at, approved_at, orgs(name)').eq('id', eventId).maybeSingle(),
+      supabase.from('events').select('name, org_id, starts_on, venue, approval_requested_at, approved_at, archived_at, orgs(name)').eq('id', eventId).maybeSingle(),
       supabase.from('contests').select('id, name, status').eq('event_id', eventId).order('created_at'),
     ])
     const failed = ev.error ?? cs.error
@@ -60,6 +60,12 @@ export function EventHome() {
     navigate(`/c/${data}/setup`)
   }
 
+  // Deletes are refused by RLS unless the rows are drafts, so a scored contest can never be lost here.
+  const remove = async (table: 'contests', id: string) => {
+    const { error, count } = await supabase.from(table).delete({ count: 'exact' }).eq('id', id)
+    if (error || !count) setError(error ? friendly(error) : "That can't be deleted: only producers can delete, and only drafts."); else load()
+  }
+
   if (!event) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
   return (
@@ -78,6 +84,7 @@ export function EventHome() {
         if (error) setError(friendly(error)); else load()
       }} />
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      {event.archived_at && <p className="text-sm text-muted">This event is archived: it's hidden from the organization's list.</p>}
 
       <section className="grid gap-3">
         <h2 className={h2}>Contests</h2>
@@ -86,11 +93,13 @@ export function EventHome() {
         ) : (
           <ul className="grid gap-2">
             {contests.map(c => (
-              <li key={c.id}>
-                <Link to={`/c/${c.id}/setup`} className={`${card} flex justify-between gap-2 px-4 py-3 hover:border-accent`}>
+              <li key={c.id} className="flex items-stretch gap-2">
+                <Link to={`/c/${c.id}/setup`} className={`${card} flex flex-1 justify-between gap-2 px-4 py-3 hover:border-accent`}>
                   <span className="font-medium">{c.name}</span>
                   <span className="font-mono text-sm text-muted">{c.status}</span>
                 </Link>
+                {c.status === 'draft' && <button type="button" className={iconButton} aria-label={`Delete ${c.name}`}
+                  onClick={() => window.confirm(`Delete the draft contest ${c.name}? Its setup, contestants and judges are deleted too.`) && remove('contests', c.id)}>✕</button>}
               </li>
             ))}
           </ul>
@@ -115,6 +124,19 @@ export function EventHome() {
           <button className={button}>Add contest</button>
         </form>
         <p className="text-xs text-muted">Templates and copies bring the scoresheet, scoring method, minimum and tiebreaks. Contestants and judges are added fresh.</p>
+      </section>
+      <section className="flex flex-wrap gap-2 border-t border-rule pt-4">
+        <button type="button" className={buttonQuiet} onClick={async () => {
+          const { error } = await supabase.from('events').update({ archived_at: event.archived_at ? null : new Date().toISOString() }).eq('id', eventId)
+          if (error) setError(friendly(error)); else load()
+        }}>{event.archived_at ? 'Unarchive event' : 'Archive event'}</button>
+        {contests.every(c => c.status === 'draft') && (
+          <button type="button" className={buttonQuiet} onClick={async () => {
+            if (!window.confirm(`Delete ${event.name}${contests.length ? ` and its ${contests.length} draft contest${contests.length === 1 ? '' : 's'}` : ''}? This can't be undone.`)) return
+            const { error } = await supabase.from('events').delete().eq('id', eventId)
+            if (error) setError(friendly(error)); else navigate(`/o/${event.org_id}`)
+          }}>Delete event</button>
+        )}
       </section>
     </div>
   )

@@ -13,7 +13,10 @@ The producer UI is built for desktop and tablet first, because it's often used o
 | `/c/:contest/setup` | P | Rubric builder, settings, tiebreak builder |
 | `/c/:contest/people` | P | Contestants, judges, recusals |
 | `/c/:contest/enter` | P, T | Score entry (3 views) |
-| `/c/:contest/standings` | P, T | Standings, projected winner, judge progress |
+| `/c/:contest/standings` | P, T | Standings (live via Realtime), projected winner, judge progress, publish |
+| `/c/:contest/comments` | P | Review and share judges' comments |
+| `/c/:contest/history` | P | Audit trail of scores and sheets; all-scores CSV |
+| `/r/:contest` | anyone | Published results |
 | `/c/:contest/comments` | P | Review, edit and approve comments, then export |
 | `/dashboard` | all | Judging (my seats), then my organizations |
 | `/judge/:contest` | J | My sheets for that contest |

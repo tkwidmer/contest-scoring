@@ -9,6 +9,7 @@ Task-level status lives in [`../build-status.json`](../build-status.json), which
 | **P1: Producer MVP** | Run a real contest from paper sheets | The seed data from the 02 worked example, entered through the UI, produces "Winner: B" by tiebreak step 2. Printable tally. Clone works. |
 | **P2: Judges** | Judges score on their phones | A judge invited by email signs in, sees only their own sheets, submits, and the sheet locks. Producer unlock is audited. |
 | **P3: Results & feedback** | Close the loop | Per-contestant feedback PDFs. The public results page shows only the snapshot. Templates can be shared across orgs. |
+| **P4: Polish & growth** | From the audit | Audit fixes (resilient judge sheet, role-aware tabs, delete/archive, History view, live standings), then features for the weekend, judges, results and the business. Tracked in build-status.json. |
 | **Later** | — | Email delivery of comments, prelims/finals rounds, % weighting, Average aggregation, realtime updates. |
 
 ## Risks to pressure-test during P1

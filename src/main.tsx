@@ -12,6 +12,7 @@ import { Admin } from './pages/Admin'
 import { JudgeSheet } from './pages/JudgeSheet'
 import { ContestComments } from './pages/ContestComments'
 import { Results } from './pages/Results'
+import { ContestHistory } from './pages/ContestHistory'
 import { OrgHome } from './pages/OrgHome'
 import { EventHome } from './pages/EventHome'
 import { ContestSetup } from './pages/ContestSetup'
@@ -39,6 +40,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/c/:contestId/scores" element={<ContestScores />} />
             <Route path="/c/:contestId/standings" element={<ContestStandings />} />
             <Route path="/c/:contestId/comments" element={<ContestComments />} />
+            <Route path="/c/:contestId/history" element={<ContestHistory />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -493,6 +493,163 @@
           ]
         }
       ]
+    },
+    {
+      "id": "P4",
+      "name": "Polish & growth",
+      "goal": "Audit fixes, then features for running the weekend, judges, results and the business.",
+      "epics": [
+        {
+          "id": "P4.1",
+          "name": "Audit fixes",
+          "tasks": [
+            {
+              "id": "P4.1.1",
+              "title": "Judge sheet: retry on reconnect, warn before closing, send leftovers",
+              "status": "done",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.1.2",
+              "title": "Claim invites on sign-in (direct /judge links work)",
+              "status": "done",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.1.3",
+              "title": "Role-aware contest tabs; judges redirected to their sheet",
+              "status": "done",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.1.4",
+              "title": "Delete draft contests and empty events; archive events",
+              "status": "done",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.1.5",
+              "title": "History (audit) view per contest + all-scores CSV",
+              "status": "done",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.1.6",
+              "title": "Live standings and judge progress (Supabase Realtime)",
+              "status": "done",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.1.7",
+              "title": "e2e: comment, approve, publish, public page",
+              "status": "done",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.1.8",
+              "title": "Social preview for public results (OG tags)",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.1.9",
+              "title": "Publish prelim placings for two-round contests",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            }
+          ]
+        },
+        {
+          "id": "P4.2",
+          "name": "Running the weekend",
+          "tasks": [
+            {
+              "id": "P4.2.1",
+              "title": "'Waiting on' panel with a copyable nudge for judges",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.2.2",
+              "title": "Speech timer that applies the overtime deduction",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.2.3",
+              "title": "Judges' vote ballot when tiebreaks are exhausted",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.2.4",
+              "title": "Bulk add contestants and judges from a pasted list",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.2.5",
+              "title": "Announcement mode: reveal placings on screen",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            }
+          ]
+        },
+        {
+          "id": "P4.3",
+          "name": "Judges & results",
+          "tasks": [
+            {
+              "id": "P4.3.1",
+              "title": "Judge overview with totals and Submit all",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.3.2",
+              "title": "Show rubric notes under each score box",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.3.3",
+              "title": "Contestant packets: own scores + approved comments",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.3.4",
+              "title": "Organization public page listing published results",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            }
+          ]
+        },
+        {
+          "id": "P4.4",
+          "name": "Business",
+          "tasks": [
+            {
+              "id": "P4.4.1",
+              "title": "Stripe Checkout for the event fee, auto-approving",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.4.2",
+              "title": "Email notifications (needs custom SMTP)",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.4.3",
+              "title": "Admin date editor for approved events",
+              "status": "todo",
+              "doc": "design/06-roadmap.md"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

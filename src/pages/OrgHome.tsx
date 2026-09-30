@@ -6,7 +6,7 @@ import { copyInvite, sendSignInLink } from '../lib/invites'
 import { button, buttonQuiet, card, h1, h2, iconButton, input, label } from '../components/ui'
 
 type Member = { user_id: string; role: string; profiles: { display_name: string | null } | null }
-type Event = { id: string; name: string; starts_on: string | null; venue: string | null }
+type Event = { id: string; name: string; starts_on: string | null; venue: string | null; archived_at: string | null }
 type Invite = { email: string; role: string }
 type Template = { id: string; name: string; description: string | null; visibility: string }
 
@@ -19,6 +19,7 @@ export function OrgHome() {
   const [invites, setInvites] = useState<Invite[]>([])
   const [invite, setInvite] = useState({ email: '', role: 'tabulator' })
   const [notice, setNotice] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
   const [me, setMe] = useState('')
   const [events, setEvents] = useState<Event[]>([])
   const [templates, setTemplates] = useState<Template[]>([])
@@ -29,7 +30,7 @@ export function OrgHome() {
     const [org, mem, ev, me, tp, inv] = await Promise.all([
       supabase.from('orgs').select('name').eq('id', orgId).maybeSingle(),
       supabase.from('org_members').select('user_id, role, profiles(display_name)').eq('org_id', orgId),
-      supabase.from('events').select('id, name, starts_on, venue').eq('org_id', orgId).order('starts_on', { ascending: false, nullsFirst: true }),
+      supabase.from('events').select('id, name, starts_on, venue, archived_at').eq('org_id', orgId).order('starts_on', { ascending: false, nullsFirst: true }),
       supabase.auth.getUser(),
       supabase.from('templates').select('id, name, description, visibility').eq('org_id', orgId).order('name'),
       supabase.from('org_invites').select('email, role').eq('org_id', orgId).order('created_at'), // producers only; others get none
@@ -83,15 +84,20 @@ export function OrgHome() {
           <p className="text-muted">No events yet.{isProducer && ' Create your first one below.'}</p>
         ) : (
           <ul className="grid gap-2">
-            {events.map(ev => (
+            {events.filter(ev => showArchived || !ev.archived_at).map(ev => (
               <li key={ev.id}>
                 <Link to={`/e/${ev.id}`} className={`${card} flex flex-wrap justify-between gap-2 px-4 py-3 hover:border-accent`}>
-                  <span className="font-medium">{ev.name}</span>
+                  <span className="font-medium">{ev.name}{ev.archived_at && <span className="text-sm font-normal text-muted"> · archived</span>}</span>
                   <span className="text-sm text-muted">{[ev.starts_on, ev.venue].filter(Boolean).join(' · ')}</span>
                 </Link>
               </li>
             ))}
           </ul>
+        )}
+        {events.some(ev => ev.archived_at) && (
+          <button type="button" className="justify-self-start text-sm text-accent underline" onClick={() => setShowArchived(v => !v)}>
+            {showArchived ? 'Hide archived events' : `Show archived events (${events.filter(ev => ev.archived_at).length})`}
+          </button>
         )}
         {isProducer && (
           <form onSubmit={createEvent} className="grid max-w-2xl gap-3 sm:grid-cols-[2fr_1fr_1.5fr_auto] sm:items-end">
