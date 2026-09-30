@@ -186,6 +186,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"org_invites": {
+                  Row: {
+                    "created_at": string,"email": string,"invited_by": string | null,"org_id": string,"role": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"email": string,"invited_by"?: string | null,"org_id": string,"role": string
+                  }
+                  Update: {
+                    "created_at"?: string,"email"?: string,"invited_by"?: string | null,"org_id"?: string,"role"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "org_invites_invited_by_fkey"
+      columns: ["invited_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "org_invites_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: false
+      referencedRelation: "orgs"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"org_members": {
                   Row: {
                     "created_at": string,"org_id": string,"role": string,"user_id": string
@@ -361,6 +386,74 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"sheet_audit": {
+                  Row: {
+                    "action": string,"category_id": string,"changed_at": string,"changed_by": string | null,"contest_id": string,"contestant_id": string,"id": number,"judge_id": string,"reason": string | null
+                  }
+                  Insert: {
+                    "action": string,"category_id": string,"changed_at"?: string,"changed_by"?: string | null,"contest_id": string,"contestant_id": string,"id"?: never,"judge_id": string,"reason"?: string | null
+                  }
+                  Update: {
+                    "action"?: string,"category_id"?: string,"changed_at"?: string,"changed_by"?: string | null,"contest_id"?: string,"contestant_id"?: string,"id"?: never,"judge_id"?: string,"reason"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sheet_audit_contest_id_fkey"
+      columns: ["contest_id"]
+isOneToOne: false
+      referencedRelation: "contests"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"sheet_submissions": {
+                  Row: {
+                    "category_id": string,"contest_id": string,"contestant_id": string,"judge_id": string,"submitted_at": string,"submitted_by": string | null,"unlock_reason": string | null,"unlocked_at": string | null,"unlocked_by": string | null
+                  }
+                  Insert: {
+                    "category_id": string,"contest_id": string,"contestant_id": string,"judge_id": string,"submitted_at"?: string,"submitted_by"?: string | null,"unlock_reason"?: string | null,"unlocked_at"?: string | null,"unlocked_by"?: string | null
+                  }
+                  Update: {
+                    "category_id"?: string,"contest_id"?: string,"contestant_id"?: string,"judge_id"?: string,"submitted_at"?: string,"submitted_by"?: string | null,"unlock_reason"?: string | null,"unlocked_at"?: string | null,"unlocked_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sheet_submissions_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "sheet_submissions_contest_id_fkey"
+      columns: ["contest_id"]
+isOneToOne: false
+      referencedRelation: "contests"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "sheet_submissions_contestant_id_fkey"
+      columns: ["contestant_id"]
+isOneToOne: false
+      referencedRelation: "contestants"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "sheet_submissions_judge_id_fkey"
+      columns: ["judge_id"]
+isOneToOne: false
+      referencedRelation: "judges"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "sheet_submissions_submitted_by_fkey"
+      columns: ["submitted_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "sheet_submissions_unlocked_by_fkey"
+      columns: ["unlocked_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"templates": {
                   Row: {
                     "created_at": string,"created_by": string | null,"description": string | null,"id": string,"name": string,"org_id": string | null,"rubric": NonNullable<Json>,"visibility": string
@@ -411,11 +504,17 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "clone_contest":
+            "claim_invites":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"clone_contest":
 { Args: { "p_event": string,"p_name": string,"p_source": string }; Returns: string
                            },
 "confirm_finalists":
 { Args: { "p_contest": string,"p_finalists": (string)[] }; Returns: undefined
+                           },
+"contest_final_result":
+{ Args: { "p_contest": string }; Returns: Json
                            },
 "create_contest_from_template":
 { Args: { "p_event": string,"p_name": string,"p_template": string }; Returns: string
@@ -442,6 +541,12 @@ isOneToOne: false
                            },
 "set_event_approval":
 { Args: { "p_approved": boolean,"p_event": string }; Returns: undefined
+                           },
+"submit_sheet":
+{ Args: { "p_category": string,"p_contestant": string,"p_judge": string }; Returns: undefined
+                           },
+"unlock_sheet":
+{ Args: { "p_category": string,"p_contestant": string,"p_judge": string,"p_reason": string }; Returns: undefined
                            }
           }
           Enums: {

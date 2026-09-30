@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'r
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
-import { cellKey, createSaveQueue, type Cell, type QueueState, type SendResult } from '../lib/saveQueue'
+import { cellKey, createSaveQueue, type Cell, type QueueState } from '../lib/saveQueue'
+import { fmt, problem, sendCell, type ScoreComponent } from '../lib/scoreCells'
 import type { TablesInsert } from '../lib/database.types'
 import { ContestHeader } from '../components/ContestHeader'
 import { card, h2, iconButton, input } from '../components/ui'
 
-type Component = { id: string; name: string; min_points: number; max_points: number; step: number }
+type Component = ScoreComponent
 type Deduction = { label: string; points?: number; percent?: number }
 type Category = { id: string; name: string; round: string; scored_by: string; guest_average: boolean; deductions: Deduction[]; components: Component[] }
 type Judge = { id: string; name: string; guest: boolean }
@@ -16,32 +17,9 @@ type Person = { id: string; name: string }
 type Contest = { id: string; name: string; status: string; event_id: string; events: { name: string } | null; finalist_count: number | null }
 type View = 'sheet' | 'category' | 'contestant'
 
-const fmt = (n: number) => Number(n.toFixed(2)).toString()
 // Picker/column key for producer-entered scores, which are stored with no judge.
 const PRODUCER = '@producer'
 const judgeIdOf = (key: string) => (key === PRODUCER ? null : key)
-
-async function sendCell(c: Cell): Promise<SendResult> {
-  const match = { judge_id: c.judge_id, contestant_id: c.contestant_id, component_id: c.component_id }
-  const del = supabase.from('scores').delete().eq('contestant_id', c.contestant_id).eq('component_id', c.component_id)
-  const { error } = c.value == null
-    ? await (c.judge_id == null ? del.is('judge_id', null) : del.eq('judge_id', c.judge_id))
-    // contest_id and entered_by are filled in by the database trigger.
-    : await supabase.from('scores').upsert({ ...match, value: c.value } as TablesInsert<'scores'>, { onConflict: 'judge_id,contestant_id,component_id' })
-  if (!error) return { ok: true }
-  // Database/API rejections won't succeed on retry; anything else (no code) is the network.
-  const rejected = /^(P0001|2\d{4}|42\d{3}|PGRST)/.test(error.code ?? '')
-  return { ok: false, retry: !rejected, message: friendly(error) }
-}
-
-// Client-side check mirrors the database trigger so typos are caught before they're queued.
-function problem(v: number, k: Component): string | null {
-  if (Number.isNaN(v)) return 'Not a number'
-  if (v < k.min_points || v > k.max_points || Math.round((v - k.min_points) / k.step * 1e6) % 1e6 !== 0) {
-    return `Must be ${fmt(k.min_points)}–${fmt(k.max_points)} in steps of ${fmt(k.step)}`
-  }
-  return null
-}
 
 export function ContestScores() {
   const { contestId = '' } = useParams()

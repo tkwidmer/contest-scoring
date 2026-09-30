@@ -98,7 +98,7 @@ select throws_ok($$ delete from public.score_audit $$, '42501', null, 'nobody de
 select pg_temp.score('test.kim', 'test.rex', 5);
 select set_config('request.jwt.claims', '{"sub":"44444444-4444-4444-4444-444444444444","role":"authenticated"}', true);
 select is((select array_agg(value) from public.scores), array[8.50::numeric], 'judge sees only their own scores');
-select throws_ok($$ select pg_temp.score('test.jay', 'test.duke', 5) $$, '42501', null, 'judge cannot enter scores yet');
+select lives_ok($$ select pg_temp.score('test.jay', 'test.duke', 5) $$, 'judge enters their own score (P2)');
 
 -- ── outsider ──
 select set_config('request.jwt.claims', '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}', true);

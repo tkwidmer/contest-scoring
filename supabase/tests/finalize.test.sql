@@ -57,14 +57,14 @@ select throws_ok($$ select public.finalize_contest(current_setting('test.c')::uu
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 select lives_ok($$ select public.finalize_contest(current_setting('test.c')::uuid, pg_temp.result('decided', current_setting('test.rex'))) $$,
   'producer finalizes');
-select results_eq($$ select status, final_result -> 'winner' ->> 'contestantId', finalized_at is not null from public.contests where id = current_setting('test.c')::uuid $$,
+select results_eq($$ select status, public.contest_final_result(id) -> 'winner' ->> 'contestantId', finalized_at is not null from public.contests where id = current_setting('test.c')::uuid $$,
   $$ values ('finalized', current_setting('test.rex'), true) $$, 'result is frozen on the contest');
 select throws_ok($$ update public.scores set value = 1 $$,
   'P0001', 'Scores can only be changed while the contest is being scored', 'scores lock once finalized');
 select throws_ok($$ update public.contests set final_result = '{}' $$, '42501', null, 'the frozen result cannot be edited directly');
 
 select lives_ok($$ select public.set_contest_status(current_setting('test.c')::uuid, 'scoring') $$, 'producer reopens scoring');
-select results_eq($$ select status, final_result is null, finalized_at is null from public.contests where id = current_setting('test.c')::uuid $$,
+select results_eq($$ select status, public.contest_final_result(id) is null, finalized_at is null from public.contests where id = current_setting('test.c')::uuid $$,
   $$ values ('scoring', true, true) $$, 'reopening discards the frozen result');
 select lives_ok($$ select public.finalize_contest(current_setting('test.c')::uuid, pg_temp.result('no_title', null)) $$,
   'no title is a valid final outcome');

@@ -38,8 +38,8 @@ export function ContestStandings() {
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
 
   const load = useCallback(async () => {
-    const [c, cats, cs, js, rs, sc, ts, pn] = await Promise.all([
-      supabase.from('contests').select('id, name, status, event_id, events(name), aggregation, threshold_pct, manual_winner_contestant_id, manual_winner_reason, final_result, finalized_at, finalist_count, prelim_aggregation, prelim_carries, finalists_confirmed_at, report_as, threshold_single_only')
+    const [c, cats, cs, js, rs, sc, ts, pn, fr] = await Promise.all([
+      supabase.from('contests').select('id, name, status, event_id, events(name), aggregation, threshold_pct, manual_winner_contestant_id, manual_winner_reason, finalized_at, finalist_count, prelim_aggregation, prelim_carries, finalists_confirmed_at, report_as, threshold_single_only')
         .eq('id', contestId).maybeSingle(),
       supabase.from('categories').select('id, name, round, scored_by, guest_average, deductions, components(id, min_points, max_points, step)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
@@ -49,11 +49,13 @@ export function ContestStandings() {
       supabase.from('scores').select('judge_id, contestant_id, component_id, value').eq('contest_id', contestId),
       supabase.from('tiebreak_steps').select('category_ids, all_judges').eq('contest_id', contestId).order('step_no'),
       supabase.from('penalties').select('contestant_id, category_id, tier').eq('contest_id', contestId),
+      // The frozen result holds every judge's scores, so it's only readable through this members-only RPC.
+      supabase.rpc('contest_final_result', { p_contest: contestId }),
     ])
-    const failed = c.error ?? cats.error ?? cs.error ?? js.error ?? rs.error ?? sc.error ?? ts.error ?? pn.error
+    const failed = c.error ?? cats.error ?? cs.error ?? js.error ?? rs.error ?? sc.error ?? ts.error ?? pn.error ?? fr.error
     if (failed) return setError(friendly(failed))
     if (!c.data) return setError("This contest doesn't exist, or you're not a member of its organization.")
-    setContest(c.data)
+    setContest({ ...c.data, final_result: fr.data })
     setInput({
       aggregation: c.data.aggregation as Aggregation,
       thresholdPct: c.data.threshold_pct,

@@ -72,8 +72,7 @@ select is((select count(*)::int from public.contestants), 2, 'judge sees the con
 select is((select array_agg(name) from public.judges), array['Jay'], 'judge sees only their own judge row');
 select is((select count(*)::int from public.recusals), 1, 'judge sees their own recusal');
 select is((select count(*)::int from public.contestant_contacts), 0, 'judge cannot see contestant emails');
-select is((select count(*)::int from public.events) + (select count(*)::int from public.tiebreak_steps), 0,
-  'judge does not see events or tiebreaks');
+select is((select count(*)::int from public.tiebreak_steps), 0, 'judge does not see tiebreaks');
 select throws_ok($$ insert into public.recusals (judge_id, contestant_id)
   select current_setting('test.jay')::uuid, id from public.contestants where display_name = 'Duke' $$,
   '42501', null, 'judge cannot add recusals yet');
