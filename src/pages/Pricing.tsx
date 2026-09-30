@@ -64,6 +64,17 @@ export function Pricing() {
                 donated to <a href={DESIRE_UNCHAINED} target="_blank" rel="noreferrer" className="text-accent underline">Desire Unchained Events</a> as
                 a fundraiser, so every contest scored here gives back to the community.
               </p>
+              <p className="max-w-prose text-muted">
+                Desire Unchained carries on DESIRE, the women’s leather weekend held in Palm Springs since 2004. When the original
+                event held its last weekend in 2024, Sarge (IMsL 2015), one of its producers, and their girl Meg stepped up to
+                continue its legacy under a new name. Desire Unchained creates safe, inclusive spaces where women and
+                gender-diverse people can learn, connect and explore, with education, consent and community at its core.
+              </p>
+              <p className="text-sm">
+                <a href="https://desireunchained.com/desire-history/" target="_blank" rel="noreferrer" className="text-accent underline">Their history</a>
+                {' · '}
+                <a href="https://desireunchained.com/mission-vision/" target="_blank" rel="noreferrer" className="text-accent underline">Mission &amp; vision</a>
+              </p>
             </div>
           </div>
         </section>
