@@ -42,6 +42,43 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"comments": {
+                  Row: {
+                    "approved": boolean,"body": string,"category_id": string | null,"contest_id": string,"contestant_id": string,"created_at": string,"edited_body": string | null,"id": string,"judge_id": string,"updated_at": string
+                  }
+                  Insert: {
+                    "approved"?: boolean,"body": string,"category_id"?: string | null,"contest_id": string,"contestant_id": string,"created_at"?: string,"edited_body"?: string | null,"id"?: string,"judge_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "approved"?: boolean,"body"?: string,"category_id"?: string | null,"contest_id"?: string,"contestant_id"?: string,"created_at"?: string,"edited_body"?: string | null,"id"?: string,"judge_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "comments_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "comments_contest_id_fkey"
+      columns: ["contest_id"]
+isOneToOne: false
+      referencedRelation: "contests"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "comments_contestant_id_fkey"
+      columns: ["contestant_id"]
+isOneToOne: false
+      referencedRelation: "contestants"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "comments_judge_id_fkey"
+      columns: ["judge_id"]
+isOneToOne: false
+      referencedRelation: "judges"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"components": {
                   Row: {
                     "category_id": string,"created_at": string,"description": string | null,"id": string,"max_points": number,"min_points": number,"name": string,"sort": number,"step": number
@@ -299,6 +336,31 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"published_results": {
+                  Row: {
+                    "contest_id": string,"published_at": string,"published_by": string | null,"show_breakdown": boolean,"snapshot": NonNullable<Json>
+                  }
+                  Insert: {
+                    "contest_id": string,"published_at"?: string,"published_by"?: string | null,"show_breakdown": boolean,"snapshot": NonNullable<Json>
+                  }
+                  Update: {
+                    "contest_id"?: string,"published_at"?: string,"published_by"?: string | null,"show_breakdown"?: boolean,"snapshot"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "published_results_contest_id_fkey"
+      columns: ["contest_id"]
+isOneToOne: true
+      referencedRelation: "contests"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "published_results_published_by_fkey"
+      columns: ["published_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"recusals": {
                   Row: {
                     "contestant_id": string,"judge_id": string,"reason": string | null
@@ -530,8 +592,14 @@ isOneToOne: false
 "finalize_contest":
 { Args: { "p_contest": string,"p_result": Json }; Returns: undefined
                            },
+"publish_contest":
+{ Args: { "p_contest": string,"p_show_breakdown": boolean }; Returns: undefined
+                           },
 "request_event_approval":
 { Args: { "p_event": string }; Returns: undefined
+                           },
+"review_comment":
+{ Args: { "p_approved": boolean,"p_comment": string,"p_edited_body": string }; Returns: undefined
                            },
 "save_contest_as_template":
 { Args: { "p_contest": string,"p_description": string,"p_name": string,"p_visibility": string }; Returns: string
@@ -547,6 +615,9 @@ isOneToOne: false
                            },
 "unlock_sheet":
 { Args: { "p_category": string,"p_contestant": string,"p_judge": string,"p_reason": string }; Returns: undefined
+                           },
+"unpublish_contest":
+{ Args: { "p_contest": string }; Returns: undefined
                            }
           }
           Enums: {

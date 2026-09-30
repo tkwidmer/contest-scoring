@@ -72,14 +72,14 @@ Common behavior:
 - Judges never see totals from other judges.
 
 ### 6. Comments & feedback (P3)
-- The producer sees a queue per contestant: every comment, the original text, and an editable version.
+- The **Comments** tab lists every comment per contestant: the original text and an editable shared version. Comments from paper sheets are added there.
 - Each comment has an **Approve** toggle.
 - **Export** produces one printable page per contestant (browser print → PDF). Judge names appear only if `anonymize_comments` is false.
 - A CSV export is also available.
 
 ### 7. Publish (P3)
-- **Publish results** first shows a preview of the public page.
-- Options: show the winner only, or the full standings with totals.
+- **Publish results** (Standings, once finalized) asks for confirmation; there's no separate preview, and **Unpublish** takes it down again.
+- Options: show the winner and placings only, or the full standings with totals by category.
 - `/r/:contest` is shareable and needs no login.
 - **Unpublish** deletes the snapshot.
 

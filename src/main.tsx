@@ -10,6 +10,8 @@ import { Landing } from './pages/Landing'
 import { Pricing } from './pages/Pricing'
 import { Admin } from './pages/Admin'
 import { JudgeSheet } from './pages/JudgeSheet'
+import { ContestComments } from './pages/ContestComments'
+import { Results } from './pages/Results'
 import { OrgHome } from './pages/OrgHome'
 import { EventHome } from './pages/EventHome'
 import { ContestSetup } from './pages/ContestSetup'
@@ -24,6 +26,7 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route index element={<Landing />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/r/:contestId" element={<Results />} />
           <Route path="/login" element={<Login />} />
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Home />} />
@@ -35,6 +38,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/c/:contestId/people" element={<ContestPeople />} />
             <Route path="/c/:contestId/scores" element={<ContestScores />} />
             <Route path="/c/:contestId/standings" element={<ContestStandings />} />
+            <Route path="/c/:contestId/comments" element={<ContestComments />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

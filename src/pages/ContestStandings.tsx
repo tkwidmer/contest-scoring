@@ -223,6 +223,8 @@ export function ContestStandings() {
         )}
       </div>
 
+      {finalized && <Publish contestId={contest.id} published={contest.status === 'published'} onChange={load} />}
+
       {final && (
         <StandingsTable title={hasRounds ? 'Finals' : 'Standings'} result={final} names={names}
           categories={names.categories.filter(c => !hasRounds || contest.prelim_carries || c.round === 'final')}
@@ -422,6 +424,41 @@ function PrintTally({ contest, banner, sections, names }: { contest: Contest; ba
         ))
       })}
     </div>
+  )
+}
+
+// Publishing: a public page at /r/:contest with the winner only, or the full standings. Frozen until unpublished.
+function Publish({ contestId, published, onChange }: { contestId: string; published: boolean; onChange: () => void }) {
+  const [full, setFull] = useState(true)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+  const url = `${window.location.origin}/r/${contestId}`
+  const act = async (p: PromiseLike<{ error: { code?: string; message: string } | null }>) => {
+    const { error } = await p
+    if (error) setError(friendly(error)); else { setError(''); onChange() }
+  }
+  return (
+    <section className={`${card} grid gap-3 px-4 py-3 print:hidden`}>
+      <h2 className={h2}>Public results</h2>
+      {published ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span>Published at <a href={url} target="_blank" rel="noreferrer" className="text-accent underline">{url.replace(/^https?:\/\//, '')}</a></span>
+          <button className={buttonQuiet} onClick={async () => { await navigator.clipboard.writeText(url).catch(() => window.prompt('Copy the link:', url)); setCopied(true) }}>{copied ? 'Copied' : 'Copy link'}</button>
+          <span className="flex-1" />
+          <button className={buttonQuiet} onClick={() => window.confirm('Unpublish? The public page stops working until you publish again.') &&
+            act(supabase.rpc('unpublish_contest', { p_contest: contestId }))}>Unpublish</button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2"><input type="radio" checked={full} onChange={() => setFull(true)} /> Full standings with totals</label>
+          <label className="flex items-center gap-2"><input type="radio" checked={!full} onChange={() => setFull(false)} /> Winner and placings only</label>
+          <span className="flex-1" />
+          <button className={button} onClick={() => window.confirm(`Publish ${full ? 'the full standings' : 'the winner and placings'} to a public page anyone with the link can see? Judges' individual scores and comments are never shown.`) &&
+            act(supabase.rpc('publish_contest', { p_contest: contestId, p_show_breakdown: full }))}>Publish results</button>
+        </div>
+      )}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+    </section>
   )
 }
 

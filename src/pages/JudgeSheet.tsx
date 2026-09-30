@@ -5,9 +5,11 @@ import { friendly } from '../lib/errors'
 import { cellKey, createSaveQueue, type QueueState } from '../lib/saveQueue'
 import { fmt, problem, sendCell, type ScoreComponent } from '../lib/scoreCells'
 import { button, card, h1 } from '../components/ui'
+import type { TablesInsert } from '../lib/database.types'
 
 // A judge scoring their own sheets on a phone (design doc 04, section 5). RLS shows them only their own scores,
-// so nothing here can reveal another judge's numbers. A sheet is one contestant x one category; submitting locks it.
+// so nothing here can reveal another judge's numbers. A sheet is one contestant x one category; submitting locks it
+// (with its comment). Comments go to the producer, who reviews them before contestants see them.
 type Category = { id: string; name: string; round: string; scored_by: string; guest_average: boolean; components: ScoreComponent[] }
 type Contestant = { id: string; display_name: string; number: number | null; withdrawn: boolean; finalist: boolean }
 type Contest = { id: string; name: string; status: string; finalist_count: number | null; events: { name: string } | null }
@@ -25,6 +27,7 @@ export function JudgeSheet() {
   const [recused, setRecused] = useState<Set<string>>(new Set())
   const [values, setValues] = useState<Map<string, number | null>>(new Map())
   const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [comments, setComments] = useState<Map<string, string>>(new Map()) // contestant|category ('' = overall) -> text
   const [current, setCurrent] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState<QueueState>({ pending: 0, failing: new Map(), offline: false })
@@ -39,15 +42,16 @@ export function JudgeSheet() {
     if (c.error ?? j.error) return setError(friendly((c.error ?? j.error)!))
     if (!c.data || !j.data) return setError("You're not a judge for this contest. Sign in with the email the producer invited.")
     const judge = j.data
-    const [cats, cs, rs, sc, sub] = await Promise.all([
+    const [cats, cs, rs, sc, sub, cm] = await Promise.all([
       supabase.from('categories').select('id, name, round, scored_by, guest_average, components(id, name, min_points, max_points, step)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
       supabase.from('contestants').select('id, display_name, number, withdrawn, finalist').eq('contest_id', contestId).order('sort'),
       supabase.from('recusals').select('contestant_id').eq('judge_id', judge.id),
       supabase.from('scores').select('contestant_id, component_id, value').eq('judge_id', judge.id),
       supabase.from('sheet_submissions').select('contestant_id, category_id, unlocked_at, unlock_reason').eq('judge_id', judge.id),
+      supabase.from('comments').select('contestant_id, category_id, body').eq('judge_id', judge.id),
     ])
-    const failed = cats.error ?? cs.error ?? rs.error ?? sc.error ?? sub.error
+    const failed = cats.error ?? cs.error ?? rs.error ?? sc.error ?? sub.error ?? cm.error
     if (failed) return setError(friendly(failed))
     setContest(c.data)
     setMe(judge)
@@ -58,6 +62,7 @@ export function JudgeSheet() {
     for (const [k, v] of queue.pendingValues()) server.set(k, v) // unsaved edits win over older server values
     setValues(server)
     setSubmissions(sub.data ?? [])
+    setComments(new Map((cm.data ?? []).map(x => [`${x.contestant_id}|${x.category_id ?? ''}`, x.body])))
   }, [contestId, queue])
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState runs after the awaits
@@ -77,6 +82,27 @@ export function JudgeSheet() {
   const selected = people.find(p => p.id === current) ?? people[0]
   const idx = selected ? people.indexOf(selected) : -1
   const open = contest.status === 'scoring'
+
+  // Comments for the contestant, saved when the box loses focus. The producer reviews them before they're shared.
+  const saveComment = async (who: Contestant, catId: string | null, text: string) => {
+    const key = `${who.id}|${catId ?? ''}`
+    if (text.trim() === (comments.get(key) ?? '')) return
+    const match = { judge_id: me.id, contestant_id: who.id, category_id: catId }
+    const { error } = text.trim() === ''
+      ? await (catId ? supabase.from('comments').delete().match(match) : supabase.from('comments').delete().match({ judge_id: me.id, contestant_id: who.id }).is('category_id', null))
+      : await supabase.from('comments').upsert({ ...match, body: text.trim() } as TablesInsert<'comments'>, { onConflict: 'judge_id,contestant_id,category_id' })
+    if (error) return setError(friendly(error))
+    setError('')
+    setComments(m => new Map(m).set(key, text.trim()))
+  }
+  const commentBox = (who: Contestant, catId: string | null, label: string, disabled: boolean) => (
+    <label className="grid gap-1">
+      <span className="text-sm text-muted">{label}</span>
+      <textarea rows={3} maxLength={4000} disabled={disabled} key={`${who.id}|${catId}|${comments.get(`${who.id}|${catId ?? ''}`) ?? ''}`}
+        defaultValue={comments.get(`${who.id}|${catId ?? ''}`) ?? ''} onBlur={e => saveComment(who, catId, e.target.value)}
+        className="rounded border border-rule bg-surface px-3 py-2 focus:border-accent focus:outline-none disabled:opacity-60" />
+    </label>
+  )
 
   const submit = async (who: Contestant, cat: Category) => {
     if (!window.confirm(`Submit your ${cat.name} scores for ${who.display_name}? You can't change them afterwards.`)) return
@@ -152,6 +178,7 @@ export function JudgeSheet() {
                         </label>
                       )
                     })}
+                    {commentBox(selected, cat.id, `Comment for ${selected.display_name} on ${cat.name} (optional)`, !open || isLocked)}
                     {open && !isLocked && (
                       <button className={`${button} min-h-11`} disabled={!filled(selected.id, cat)} onClick={() => submit(selected, cat)}>
                         Submit {cat.name}
@@ -160,6 +187,7 @@ export function JudgeSheet() {
                   </div>
                 )
               })}
+              <div className={`${card} p-4`}>{commentBox(selected, null, `Overall comment for ${selected.display_name} (optional)`, !open)}</div>
               <div className="flex justify-between gap-2">
                 <button className="min-h-11 rounded border border-rule px-4 disabled:opacity-40" disabled={idx <= 0} onClick={() => setCurrent(people[idx - 1]!.id)}>← Previous</button>
                 <button className="min-h-11 rounded border border-rule px-4 disabled:opacity-40" disabled={idx >= people.length - 1} onClick={() => setCurrent(people[idx + 1]!.id)}>Next →</button>

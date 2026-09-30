@@ -8,6 +8,7 @@ const tabs = [
   { to: 'people', label: 'People' },
   { to: 'scores', label: 'Scores' },
   { to: 'standings', label: 'Standings' },
+  { to: 'comments', label: 'Comments' },
 ]
 
 export function ContestHeader({ contest }: Props) {

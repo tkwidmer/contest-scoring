@@ -449,13 +449,13 @@
             {
               "id": "P3.1.1",
               "title": "Judge comments + producer review/approve",
-              "status": "todo",
+              "status": "done",
               "doc": "design/04-ux-flows.md"
             },
             {
               "id": "P3.1.2",
               "title": "Per-contestant print/PDF + CSV export, anonymity",
-              "status": "todo",
+              "status": "done",
               "doc": "design/04-ux-flows.md"
             }
           ]
@@ -467,7 +467,7 @@
             {
               "id": "P3.2.1",
               "title": "publish_contest RPC + published_results + public page",
-              "status": "todo",
+              "status": "done",
               "doc": "design/03-auth-rls.md"
             }
           ]

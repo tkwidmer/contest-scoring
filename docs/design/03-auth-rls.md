@@ -36,8 +36,8 @@ P = producer of the owning org, T = tabulator of that org, J = judge (only their
 | `scores` | P, T; **J: own `judge_id` only** | P, T; J: own, only while the sheet is unlocked and status = scoring (trigger) |
 | `sheet_submissions` | P, T; J: own | J submits own. P, T submit on a judge's behalf. **Only P unlocks** (RPC). |
 | `score_audit` | P | **Nobody.** Trigger only. |
-| `comments` | P; J: own | J: own body. P: `edited_body`, `approved`. |
-| `published_results` | **everyone, including anon** | Written only by the `publish_contest` RPC (P) |
+| `comments` | P; J: own | J: own body (while scoring; a category comment locks with its submitted sheet). P: body only for judges without an account (paper), and `edited_body`/`approved` through `review_comment`. Frozen once published. |
+| `published_results` | **everyone, including anon** | Written only by `publish_contest` / `unpublish_contest` (P). The snapshot is built in SQL from the finalized result: names, ranks, winner, and optionally totals by category. Never judges, per-judge scores, emails or comments. |
 | `templates` | org members for `private`; everyone signed in for `public` and `curated` | P for org rows. Platform admin for `curated`. |
 
 Invariants the policies must keep:

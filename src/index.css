@@ -31,6 +31,7 @@ body { @apply bg-bg text-fg font-sans antialiased; }
 
 /* Print: landscape, and always the light palette on white paper, whatever the screen's color scheme. */
 @page { size: landscape; margin: 12mm; }
+@page feedback { size: portrait; margin: 18mm; } /* contestants' comment pages */
 @media print {
   :root {
     --c-bg: #ffffff; --c-surface: #ffffff; --c-fg: #000000; --c-muted: #555a66; --c-rule: #9a9ea8;

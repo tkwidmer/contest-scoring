@@ -6,7 +6,7 @@ import { PublicFooter, PublicHeader } from '../components/PublicHeader'
 const cta = 'inline-block rounded bg-accent px-5 py-2.5 font-medium text-on-accent hover:opacity-90'
 const ctaQuiet = 'inline-block rounded border border-rule px-5 py-2.5 font-medium hover:border-accent'
 
-const features: { title: string; body: string; soon?: boolean }[] = [
+const features: { title: string; body: string }[] = [
   {
     title: 'Instant tallying',
     body: 'Standings update with every score. When the last judge’s score is in, so is the result: highs and lows dropped, deductions applied, tiebreaks run. No hour-long wait while tally checks and re-checks.',
@@ -25,13 +25,11 @@ const features: { title: string; body: string; soon?: boolean }[] = [
   },
   {
     title: 'Judges score on the website',
-    body: 'Judges sign in on their phone and score from their own sheet. No paper to collect, no numbers to retype.',
-    soon: true,
+    body: 'Judges sign in on their phone, score their own sheets and submit them. No paper to collect, no numbers to retype, and they only ever see their own scores.',
   },
   {
     title: 'Transparent results',
-    body: 'Publish the final results to a public page for contestants and the community, with each category’s scores.',
-    soon: true,
+    body: 'Publish the final results to a public page for contestants and the community, with each category’s scores, and share judges’ reviewed comments with each contestant.',
   },
 ]
 
@@ -81,7 +79,6 @@ export function Landing() {
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {features.map(f => (
                 <li key={f.title} className={`${card} grid content-start gap-2 bg-bg p-5`}>
-                  {f.soon && <span className="justify-self-start rounded-full border border-accent px-2 py-0.5 text-xs font-medium text-accent">Coming soon</span>}
                   <h3 className="text-lg font-semibold">{f.title}</h3>
                   <p className="text-muted">{f.body}</p>
                 </li>
