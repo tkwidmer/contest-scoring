@@ -15,6 +15,7 @@ import { Results } from './pages/Results'
 import { ContestHistory } from './pages/ContestHistory'
 import { OrgResults } from './pages/OrgResults'
 import { Announce } from './pages/Announce'
+import { ContestSheets } from './pages/ContestSheets'
 import { OrgHome } from './pages/OrgHome'
 import { EventHome } from './pages/EventHome'
 import { ContestSetup } from './pages/ContestSetup'
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/c/:contestId/standings" element={<ContestStandings />} />
             <Route path="/c/:contestId/comments" element={<ContestComments />} />
             <Route path="/c/:contestId/history" element={<ContestHistory />} />
+            <Route path="/c/:contestId/sheets" element={<ContestSheets />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

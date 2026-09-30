@@ -180,6 +180,7 @@ export function ContestScores() {
             <Picker label="Contestant" value={contestantId} onChange={setContestantId} options={contestants} stepper />
           </div>
           <h2 className={h2}>{judgeId === PRODUCER ? 'Producer-entered scores' : `${nameOf(judges, judgeId)}'s sheet`} for {nameOf(contestants, contestantId)}</h2>
+          {judgeId !== PRODUCER && <Link to={`/c/${contestId}/sheets?judge=${judgeId}`} className="justify-self-start text-sm text-accent underline">Print paper scoresheets for {nameOf(judges, judgeId)}</Link>}
           <div className={`${card} max-w-xl overflow-x-auto`}>
             <table className="w-full text-sm">
               <tbody>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
 import { useWrites } from '../lib/useWrites'
@@ -223,6 +223,9 @@ export function ContestPeople() {
                   <span className="font-mono text-xs text-muted">{j.user_id ? '✓ signed in' : j.email ? 'not signed in yet' : 'paper only'}</span>
                   <span>{isProducer && draft && <button type="button" className={iconButton} aria-label={`Delete ${j.name}`}
                     onClick={() => window.confirm(`Delete judge ${j.name}?`) && run(supabase.from('judges').delete().eq('id', j.id))}>✕</button>}</span>
+                  {!j.user_id && (
+                    <Link to={`/c/${contestId}/sheets?judge=${j.id}`} className="text-xs text-accent underline sm:col-span-5">Print paper scoresheets for {j.name}</Link>
+                  )}
                   {isProducer && j.email && !j.user_id && (
                     <span className="flex flex-wrap gap-2 sm:col-span-5">
                       <button type="button" className={buttonQuiet} onClick={async () => setNotice(await sendSignInLink(j.email!))}>Email a sign-in link</button>

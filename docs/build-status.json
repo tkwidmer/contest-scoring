@@ -592,6 +592,12 @@
               "title": "Announcement mode: reveal placings on screen",
               "status": "done",
               "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.2.6",
+              "title": "Printable paper scoresheets (per judge or blank) for judges who can't score online",
+              "status": "done",
+              "doc": "design/04-ux-flows.md"
             }
           ]
         },
