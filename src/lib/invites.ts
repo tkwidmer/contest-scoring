@@ -11,7 +11,7 @@ export async function sendSignInLink(email: string): Promise<string> {
 
 // Fallback for texting: returns a notice to show.
 export async function copyInvite(email: string, what: string): Promise<string> {
-  const text = `You've been invited to ${what} on Tallymaster.top. Sign in at ${window.location.origin}/login with ${email}.`
+  const text = `You've been invited to ${what} on Tallymaster.top. Sign in at ${window.location.origin}/login with ${email} (use Continue with Google if that's a Google account).`
   try {
     await navigator.clipboard.writeText(text)
     return 'Invite copied. Paste it into a text or email.'
