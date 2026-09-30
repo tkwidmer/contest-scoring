@@ -7,9 +7,10 @@ export function PublicHeader() {
   const session = useSession()
   return (
     <header className="border-b border-rule bg-surface">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
         <Link to="/"><Brand className="text-2xl" /></Link>
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex items-center gap-3 text-sm sm:gap-4">
+          <Link to="/features" className="hover:text-accent">Features</Link>
           <Link to="/pricing" className="hover:text-accent">Pricing</Link>
           {session
             ? <Link to="/dashboard" className="rounded bg-accent px-3 py-1 font-medium text-on-accent hover:opacity-90">Dashboard</Link>
@@ -26,6 +27,7 @@ export function PublicFooter() {
       <Brand className="text-base" />
       <span className="flex flex-wrap gap-x-4 gap-y-1">
         <span>Made by and for the leather community.</span>
+        <a href="/features" className="hover:text-fg">Features</a>
         <a href="/roadmap.html" className="hover:text-fg">Roadmap</a>
       </span>
     </footer>

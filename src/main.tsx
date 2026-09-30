@@ -8,6 +8,7 @@ import { Login } from './pages/Login'
 import { Home } from './pages/Home'
 import { Landing } from './pages/Landing'
 import { Pricing } from './pages/Pricing'
+import { Features } from './pages/Features'
 import { Admin } from './pages/Admin'
 import { JudgeSheet } from './pages/JudgeSheet'
 import { ContestComments } from './pages/ContestComments'
@@ -30,6 +31,7 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route index element={<Landing />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/features" element={<Features />} />
           <Route path="/r/:contestId" element={<Results />} />
           <Route path="/org/:orgId" element={<OrgResults />} />
           <Route path="/c/:contestId/announce" element={<Announce />} />

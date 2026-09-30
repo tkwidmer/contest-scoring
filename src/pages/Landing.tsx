@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { card } from '../components/ui'
 import { PublicFooter, PublicHeader } from '../components/PublicHeader'
+import { Shot } from '../components/Shot'
 
 // Public landing page at /, for everyone. The signed-in app lives under /dashboard. Screenshots in public/landing use fictional contests only.
 const cta = 'inline-block rounded bg-accent px-5 py-2.5 font-medium text-on-accent hover:opacity-90'
@@ -9,27 +10,27 @@ const ctaQuiet = 'inline-block rounded border border-rule px-5 py-2.5 font-mediu
 const features: { title: string; body: string }[] = [
   {
     title: 'Judges score on their phones',
-    body: 'Judges sign in on their phone, score their own sheets and submit them. No paper to collect, no numbers to retype, and they only ever see their own scores.',
+    body: 'Judges sign in on their own phones, score their own sheets, add comments and submit. They only ever see their own scores. Judge without a phone? Print them paper scoresheets.',
   },
   {
-    title: 'Instant tallying',
-    body: 'Standings update with every score. When the last judge’s score is in, so is the result: highs and lows dropped, deductions applied, tiebreaks run. No hour-long wait while tally checks and re-checks.',
+    title: 'Live standings, instant results',
+    body: 'Standings update as sheets come in: highs and lows dropped, deductions applied, tiebreaks run. When the last score is in, so is the winner.',
   },
   {
     title: 'No tabulation errors',
-    body: 'No copying the wrong line into the wrong cell. Every score is checked against the category’s range, each judge has exactly one score per box, and the math runs the same way every time.',
+    body: 'No copying the wrong line into the wrong cell. Every score is checked against the category’s range, each judge has one score per box, and the math runs the same way every time.',
   },
   {
     title: 'Your contest, your rules',
-    body: 'Straight or Olympic scoring, prelims and finals, speech overtime deductions, community votes, cross-panel interviews, a minimum score to award the title and your own tiebreak order.',
+    body: 'Straight or Olympic scoring, prelims and finals, overtime deductions with a speech timer, community votes, cross-panel interviews, a minimum to win and your own tiebreaks.',
   },
   {
-    title: 'An audit trail for every score',
-    body: 'Every entry and every change is recorded with who made it and when. Recused judges are handled by the rules, not by hand, and a finalized result is locked.',
+    title: 'A record of every score',
+    body: 'Every score entered or changed and every sheet submitted or reopened is recorded with who and when. Nobody can edit that history.',
   },
   {
-    title: 'Transparent results',
-    body: 'Publish the final results to a public page for contestants and the community, with each category’s scores, and share judges’ reviewed comments with each contestant.',
+    title: 'Results day, sorted',
+    body: 'Reveal the placings on screen, publish the results to a public page, and give each contestant a packet with their own scores and reviewed judges’ comments.',
   },
 ]
 
@@ -38,16 +39,6 @@ const steps = [
   ['Judges score', 'Judges sign in on their own phones, score each contestant category by category, add comments and submit. A submitted sheet locks. Scores save as they’re typed and survive patchy hotel Wi-Fi, and the tally team can still enter paper sheets.'],
   ['Crown', 'Standings update live as sheets come in. When the last one lands, finalize, print the tally, publish the results page and share each contestant’s reviewed comments.'],
 ]
-
-function Shot({ name, alt, className = '' }: { name: string; alt: string; className?: string }) {
-  return (
-    <picture>
-      <source srcSet={`/landing/${name}-dark.png`} media="(prefers-color-scheme: dark)" />
-      <img src={`/landing/${name}-light.png`} alt={alt} loading="lazy"
-        className={`w-full rounded-lg border border-rule shadow-lg ${className}`} />
-    </picture>
-  )
-}
 
 export function Landing() {
   return (
@@ -62,12 +53,12 @@ export function Landing() {
               The tally is done when the last score is in.
             </h1>
             <p className="max-w-prose text-lg text-muted">
-              Tallymaster.top scores leather, bear and bootblack title contests. Set it up the way your contest runs, enter
-              the judges’ scores, and get fast, accurate results you can trust.
+              Tallymaster.top scores leather, bear and bootblack title contests. Set it up the way your contest runs, let judges
+              score on their phones, and get fast, accurate results you can trust.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link to="/login" className={cta}>Get started</Link>
-              <a href="#how" className={ctaQuiet}>How it works</a>
+              <Link to="/features" className={ctaQuiet}>See every feature</Link>
             </div>
           </div>
           <Shot name="standings" alt="Standings for a fictional contest: the winner, each contestant's category scores and one judge's breakdown with dropped scores struck through" />
@@ -84,6 +75,7 @@ export function Landing() {
                 </li>
               ))}
             </ul>
+            <Link to="/features" className="justify-self-start font-medium text-accent underline">See every feature →</Link>
           </div>
         </section>
 

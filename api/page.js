@@ -6,6 +6,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 async function meta(path) {
   const site = 'Tallymaster.top'
+  if (path === '/features') return { title: `Features · ${site}`, description: 'Everything your title contest needs: judges scoring on their phones (or paper), live standings, tiebreaks, deductions, public results and a record of every score.' }
   if (path === '/pricing') return { title: `Pricing · ${site}`, description: 'One flat fee per event. What’s left after running costs goes to Desire Unchained Events.' }
   const id = path.match(/^\/r\/([^/]+)$/)?.[1]
   if (id && UUID.test(id)) {
