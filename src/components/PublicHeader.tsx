@@ -24,7 +24,10 @@ export function PublicFooter() {
   return (
     <footer className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 px-4 py-6 text-sm text-muted">
       <Brand className="text-base" />
-      <span>Made by and for the leather community.</span>
+      <span className="flex flex-wrap gap-x-4 gap-y-1">
+        <span>Made by and for the leather community.</span>
+        <a href="/roadmap.html" className="hover:text-fg">Roadmap</a>
+      </span>
     </footer>
   )
 }

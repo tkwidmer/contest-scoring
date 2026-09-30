@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "roadmap": "cp docs/build-dashboard.html public/roadmap.html && cp docs/build-status.json public/build-status.json",
+    "predev": "npm run roadmap",
+    "prebuild": "npm run roadmap",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",

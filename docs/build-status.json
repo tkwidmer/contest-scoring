@@ -337,7 +337,7 @@
               "title": "Rehearsal with a real past scoresheet",
               "status": "done",
               "doc": "design/06-roadmap.md",
-              "note": "IMsBB 2024 recreated from its Google Form responses; same winner and totals, and it caught duplicate IMsL submissions in the spreadsheet"
+              "note": "A real past contest recreated from its scoring records; same winner and totals"
             },
             {
               "id": "P1.6.12",
@@ -488,7 +488,7 @@
               "title": "Curated templates (platform admin)",
               "status": "done",
               "doc": "design/01-domain-model.md",
-              "note": "Four official templates loaded; tkwidmer@gmail.com is platform admin"
+              "note": "Official templates loaded and managed by platform admins"
             }
           ]
         }

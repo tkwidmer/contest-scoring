@@ -117,7 +117,7 @@ function render() {
         <td class="tid">${esc(t.id)}</td>
         <td class="title">${esc(t.title)}${t.note ? `<small>${esc(t.note)}</small>` : ''}</td>
         <td><span class="pill s-${esc(t.status)}">${LABEL[t.status] || esc(t.status)}</span></td>
-        <td class="doc">${t.doc ? `<a href="${esc(t.doc)}">${esc(t.doc.replace('design/', ''))}</a>` : ''}</td></tr>`).join('');
+        <td class="doc">${t.doc ? `<a href="${esc(docUrl(t.doc))}">${esc(t.doc.replace('design/', ''))}</a>` : ''}</td></tr>`).join('');
     }).join('');
     if (!rows) return '';
     return `<section class="phase" id="${esc(p.id)}"><div class="phase-head"><h2>${esc(p.id)} · ${esc(p.name)}</h2>
@@ -132,6 +132,8 @@ document.getElementById('filters').addEventListener('click', e => {
   render();
 });
 
+// Doc links: relative when opened from docs/ locally, otherwise the public repo on GitHub.
+function docUrl(doc) { return location.protocol === 'file:' ? doc : `https://github.com/tkwidmer/contest-scoring/blob/main/docs/${doc}` }
 fetch('build-status.json', { cache: 'no-store' })
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(d => { data = d; render(); })

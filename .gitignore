@@ -8,3 +8,5 @@ supabase/.branches
 supabase/.temp
 test-results
 playwright-report
+public/roadmap.html
+public/build-status.json
