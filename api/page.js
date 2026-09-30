@@ -34,7 +34,8 @@ export default async function handler(req, res) {
       `<meta property="og:url" content="${esc(origin + path)}" />`,
       `<meta name="twitter:card" content="summary_large_image" />`,
     ].join('\n    ')
-    html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(m.title)}</title>`)
+    html = html.replace(/\s*<meta (property="og:|name="twitter:)[^>]*>/g, '') // the home page's defaults
+      .replace(/<title>[^<]*<\/title>/, `<title>${esc(m.title)}</title>`)
       .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${esc(m.description)}" />`)
       .replace('</head>', `    ${tags}\n  </head>`)
   } catch { /* serve the plain page */ }
