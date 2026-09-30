@@ -14,6 +14,7 @@ import { ContestComments } from './pages/ContestComments'
 import { Results } from './pages/Results'
 import { ContestHistory } from './pages/ContestHistory'
 import { OrgResults } from './pages/OrgResults'
+import { Announce } from './pages/Announce'
 import { OrgHome } from './pages/OrgHome'
 import { EventHome } from './pages/EventHome'
 import { ContestSetup } from './pages/ContestSetup'
@@ -30,6 +31,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/r/:contestId" element={<Results />} />
           <Route path="/org/:orgId" element={<OrgResults />} />
+          <Route path="/c/:contestId/announce" element={<Announce />} />
           <Route path="/login" element={<Login />} />
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Home />} />

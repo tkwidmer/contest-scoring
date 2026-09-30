@@ -590,7 +590,7 @@
             {
               "id": "P4.2.5",
               "title": "Announcement mode: reveal placings on screen",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             }
           ]
@@ -614,7 +614,7 @@
             {
               "id": "P4.3.3",
               "title": "Contestant packets: own scores + approved comments",
-              "status": "todo",
+              "status": "done",
               "doc": "design/06-roadmap.md"
             },
             {

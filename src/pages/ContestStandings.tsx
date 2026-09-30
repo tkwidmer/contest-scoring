@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import type { Json } from '../lib/database.types'
 import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
@@ -230,6 +230,7 @@ export function ContestStandings() {
         <span className="text-xs text-muted">{streaming && '● Live · '}{loadedAt && `Updated ${loadedAt.toLocaleTimeString()}`}</span>
         <span className="flex-1" />
         <button className={buttonQuiet} onClick={() => window.print()}>Print tally</button>
+        {finalized && <Link to={`/c/${contest.id}/announce`} className={buttonQuiet}>Announce on screen</Link>}
         {contest.status === 'scoring' && final && (final.winner.kind === 'decided' || final.winner.kind === 'no_title') && (
           <button className={button} disabled={busy} onClick={finalize}>Finalize results</button>
         )}

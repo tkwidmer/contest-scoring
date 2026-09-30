@@ -5,6 +5,7 @@ import { friendly } from '../lib/errors'
 import { ContestHeader } from '../components/ContestHeader'
 import { button, buttonQuiet, card, h2, input, label } from '../components/ui'
 import type { TablesInsert } from '../lib/database.types'
+import { fmt } from '../lib/scoreCells'
 
 // Producer review of judges' comments (design doc 04, section 6): keep the original, edit a shared version,
 // approve. Only approved comments are printed or exported, with judge names only if the contest allows it.
@@ -12,6 +13,8 @@ type Contest = { id: string; name: string; status: string; event_id: string; ano
 type Comment = { id: string; judge_id: string; contestant_id: string; category_id: string | null; body: string; edited_body: string | null; approved: boolean }
 type Named = { id: string; name: string }
 type Judge = Named & { user_id: string | null }
+// The contestant's own line of the finalized result (packets show nobody else's scores).
+type Placing = { contestantId: string; rank: number; total: number; pct: number; categoryTotals: Record<string, number> }
 
 export function ContestComments() {
   const { contestId = '' } = useParams()
@@ -20,16 +23,18 @@ export function ContestComments() {
   const [contestants, setContestants] = useState<Named[]>([])
   const [judges, setJudges] = useState<Judge[]>([])
   const [comments, setComments] = useState<Comment[]>([])
+  const [placings, setPlacings] = useState<Placing[]>([])
   const [add, setAdd] = useState({ judge: '', contestant: '', category: '', body: '' })
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
-    const [c, cats, cs, js, cm] = await Promise.all([
+    const [c, cats, cs, js, cm, fr] = await Promise.all([
       supabase.from('contests').select('id, name, status, event_id, anonymize_comments, events(name)').eq('id', contestId).maybeSingle(),
       supabase.from('categories').select('id, name').eq('contest_id', contestId).order('sort'),
       supabase.from('contestants').select('id, display_name, number').eq('contest_id', contestId).eq('withdrawn', false).order('sort'),
       supabase.from('judges').select('id, name, user_id').eq('contest_id', contestId).order('sort'),
       supabase.from('comments').select('id, judge_id, contestant_id, category_id, body, edited_body, approved').eq('contest_id', contestId).order('created_at'),
+      supabase.rpc('contest_final_result', { p_contest: contestId }),
     ])
     const failed = c.error ?? cats.error ?? cs.error ?? js.error ?? cm.error
     if (failed) return setError(friendly(failed))
@@ -39,6 +44,7 @@ export function ContestComments() {
     setContestants((cs.data ?? []).map(x => ({ id: x.id, name: x.number != null ? `${x.number} · ${x.display_name}` : x.display_name })))
     setJudges(js.data ?? [])
     setComments(cm.data ?? [])
+    setPlacings(((fr.data as { standings?: Placing[] } | null)?.standings) ?? [])
   }, [contestId])
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; setState runs after the awaits
@@ -94,11 +100,12 @@ export function ContestComments() {
             onChange={e => act(supabase.from('contests').update({ anonymize_comments: !e.target.checked }).eq('id', contest.id))} />
           Show judge names to contestants
         </label>
-        <button className={buttonQuiet} disabled={!approved.length} onClick={() => window.print()}>Print for contestants</button>
+        <button className={buttonQuiet} disabled={!approved.length && !placings.length} onClick={() => window.print()}>Print contestant packets</button>
         <button className={buttonQuiet} disabled={!approved.length} onClick={downloadCsv}>Download CSV</button>
       </div>
       <p className="max-w-prose text-sm text-muted">
-        Only approved comments are shared, one page per contestant. Edit the shared version to fix typos or soften wording;
+        Only approved comments are shared. Each contestant's packet is one page: once results are finalized, it opens with their
+        own placing and category scores (never anyone else's), then their approved comments. Edit the shared version to fix typos or soften wording;
         the judge's original is kept. {frozen && 'Results are published, so comments are read-only.'}
       </p>
 
@@ -146,10 +153,25 @@ export function ContestComments() {
 
     {/* Printed feedback: one page per contestant with approved comments. */}
     <div className="hidden print:block">
-      {contestants.filter(p => approved.some(c => c.contestant_id === p.id)).map(p => (
+      {contestants.filter(p => approved.some(c => c.contestant_id === p.id) || placings.some(x => x.contestantId === p.id)).map(p => {
+        const mine = placings.find(x => x.contestantId === p.id)
+        return (
         <section key={p.id} className="break-after-page text-[11pt] leading-relaxed [page:feedback]">
           <p className="text-muted">{contest.events?.name} · {contest.name}</p>
-          <h1 className="border-b-2 border-fg pb-2 font-display text-3xl font-extrabold uppercase">Judges' comments for {p.name}</h1>
+          <h1 className="border-b-2 border-fg pb-2 font-display text-3xl font-extrabold uppercase">{p.name}</h1>
+          {mine && (
+            <div className="mt-4">
+              <p className="text-lg">Placed <strong>{mine.rank}</strong> of {placings.length} · {fmt(mine.total)} points ({(mine.pct * 100).toFixed(1)}%)</p>
+              <table className="mt-2 border-collapse">
+                <tbody>
+                  {categories.filter(c => c.id in mine.categoryTotals).map(c => (
+                    <tr key={c.id}><td className="border border-rule px-2 py-0.5">{c.name}</td><td className="border border-rule px-2 py-0.5 text-right font-mono">{fmt(mine.categoryTotals[c.id]!)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {approved.some(c => c.contestant_id === p.id) && <h2 className="mt-6 text-sm font-semibold uppercase tracking-wider">Judges' comments</h2>}
           {order(approved.filter(c => c.contestant_id === p.id)).map(c => (
             <div key={c.id} className="mt-4 break-inside-avoid">
               <p className="text-sm font-semibold uppercase tracking-wider text-muted">{where(c)}</p>
@@ -158,7 +180,7 @@ export function ContestComments() {
             </div>
           ))}
         </section>
-      ))}
+      )})}
     </div>
   </>)
 }
