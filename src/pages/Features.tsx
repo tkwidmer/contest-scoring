@@ -75,7 +75,7 @@ export function Features() {
       <PublicHeader />
       <main>
         <section className="mx-auto grid max-w-6xl gap-5 px-4 py-14 md:py-20">
-          <p className="text-sm font-semibold uppercase tracking-wider text-accent">Features</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-heart">Features</p>
           <h1 className="max-w-3xl font-display text-5xl leading-none font-extrabold uppercase sm:text-6xl">Everything your title contest needs</h1>
           <p className="max-w-prose text-lg text-muted">
             Tallymaster.top covers the whole weekend: setting up the scoresheet, judges scoring on their phones (or paper), the tally

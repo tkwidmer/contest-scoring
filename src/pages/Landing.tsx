@@ -48,7 +48,7 @@ export function Landing() {
       <main>
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-[5fr_6fr] md:py-20">
           <div className="grid gap-6">
-            <p className="text-sm font-semibold uppercase tracking-wider text-accent">Scoring for title contests</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-heart">Scoring for title contests</p>
             <h1 className="font-display text-5xl leading-none font-extrabold uppercase sm:text-6xl">
               The tally is done when the last score is in.
             </h1>
@@ -84,7 +84,7 @@ export function Landing() {
           <ol className="grid gap-6 md:grid-cols-3">
             {steps.map(([title, body], i) => (
               <li key={title} className="grid content-start gap-2">
-                <span className="font-display text-5xl font-extrabold text-accent">{i + 1}</span>
+                <span className="font-display text-5xl font-extrabold text-heart">{i + 1}</span>
                 <h3 className="text-lg font-semibold">{title}</h3>
                 <p className="text-muted">{body}</p>
               </li>

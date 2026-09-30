@@ -80,7 +80,7 @@ export function Announce() {
     <main className="grid min-h-dvh cursor-pointer select-none place-content-center gap-6 bg-bg p-8 text-center"
       onClick={() => setStep(s => Math.min(s + 1, cards.length - 1))}>
       <p className="text-2xl text-muted sm:text-4xl">{card.kicker}</p>
-      <h1 key={step} className={`font-display font-extrabold uppercase leading-none ${card.big ? 'text-6xl text-accent sm:text-9xl' : 'text-5xl sm:text-8xl'}`}>{card.title}</h1>
+      <h1 key={step} className={`font-display font-extrabold uppercase leading-none ${card.big ? 'text-6xl text-heart sm:text-9xl' : 'text-5xl sm:text-8xl'}`}>{card.title}</h1>
       <p className="fixed bottom-4 left-0 right-0 text-xs text-muted">{step + 1} / {cards.length}</p>
     </main>
   )

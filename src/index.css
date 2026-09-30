@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-/* Colors are CSS variables remapped for dark mode (Inkborn convention: no `dark:` variants). */
+/* Colors are CSS variables remapped for dark mode (Inkborn convention: no `dark:` variants).
+   Palette from the Leather Pride flag: black, flag blue #18186b, white, and the heart's red #e70039. */
 @theme {
   --color-bg: var(--c-bg);
   --color-surface: var(--c-surface);
@@ -10,6 +11,7 @@
   --color-accent: var(--c-accent);
   --color-on-accent: var(--c-on-accent);
   --color-danger: var(--c-danger);
+  --color-heart: var(--c-heart);
   --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --font-sans: "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -17,17 +19,24 @@
 
 :root {
   --c-bg: #f6f6f8; --c-surface: #ffffff; --c-fg: #16181f; --c-muted: #5d6272; --c-rule: #dcdee6;
-  --c-accent: #1f3a93; --c-on-accent: #ffffff; --c-danger: #b3202e;
+  --c-accent: #18186b; --c-on-accent: #ffffff; --c-danger: #b3202e; --c-heart: #e70039;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --c-bg: #111318; --c-surface: #191c23; --c-fg: #e8e9ee; --c-muted: #9ba0b0; --c-rule: #2c3040;
-    --c-accent: #8ea6ff; --c-on-accent: #111318; --c-danger: #ff6b78;
+    --c-accent: #a3a3ff; --c-on-accent: #111318; --c-danger: #ff6b78; --c-heart: #ff3d68; /* flag blue and red, lifted for the dark background */
     color-scheme: dark;
   }
 }
 
 body { @apply bg-bg text-fg font-sans antialiased; }
+
+/* The flag's nine stripes (black, blue, black, blue, white, blue, black, blue, black), as a thin band. Literal
+   colors on purpose: it's the flag, the same in light and dark mode. */
+.flag-stripes { /* height comes from a utility class: h-[18px] on public pages, h-[9px] in the app */
+  background: linear-gradient(#000 0 11.11%, #18186b 11.11% 22.22%, #000 22.22% 33.33%, #18186b 33.33% 44.44%, #fff 44.44% 55.55%,
+    #18186b 55.55% 66.66%, #000 66.66% 77.77%, #18186b 77.77% 88.88%, #000 88.88%);
+}
 
 /* Print: landscape, and always the light palette on white paper, whatever the screen's color scheme. */
 @page { size: landscape; margin: 12mm; }
@@ -35,7 +44,7 @@ body { @apply bg-bg text-fg font-sans antialiased; }
 @media print {
   :root {
     --c-bg: #ffffff; --c-surface: #ffffff; --c-fg: #000000; --c-muted: #555a66; --c-rule: #9a9ea8;
-    --c-accent: #1f3a93; --c-on-accent: #ffffff; --c-danger: #b3202e;
+    --c-accent: #18186b; --c-on-accent: #ffffff; --c-danger: #b3202e; --c-heart: #e70039;
     color-scheme: light;
   }
 }

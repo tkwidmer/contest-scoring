@@ -24,6 +24,7 @@ export function Layout() {
   return (
     <div className="min-h-dvh">
       <header className="border-b border-rule bg-surface print:hidden">
+        <div className="flag-stripes h-[9px]" aria-hidden />
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
           <Link to="/"><Brand className="text-2xl" /></Link>
           <div className="flex items-center gap-3 text-sm text-muted">

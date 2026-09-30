@@ -35,7 +35,7 @@ export function Pricing() {
       <main>
         <section className="mx-auto grid max-w-6xl items-start gap-10 px-4 py-14 md:grid-cols-[1fr_1fr] md:py-20">
           <div className="grid gap-5">
-            <p className="text-sm font-semibold uppercase tracking-wider text-accent">Pricing</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-heart">Pricing</p>
             <h1 className="font-display text-5xl leading-none font-extrabold uppercase sm:text-6xl">One flat fee per event.</h1>
             <p className="max-w-prose text-lg text-muted">
               No subscriptions and no per-contestant charges. Set everything up for free, and pay when your event is ready to score.
@@ -85,7 +85,7 @@ export function Pricing() {
           <ol className="grid gap-6 md:grid-cols-3">
             {steps.map(([title, body], i) => (
               <li key={title} className="grid content-start gap-2">
-                <span className="font-display text-5xl font-extrabold text-accent">{i + 1}</span>
+                <span className="font-display text-5xl font-extrabold text-heart">{i + 1}</span>
                 <h3 className="text-lg font-semibold">{title}</h3>
                 <p className="text-muted">{body}</p>
               </li>

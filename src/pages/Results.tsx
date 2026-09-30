@@ -49,7 +49,7 @@ export function ResultsView({ snapshot: s, publishedAt }: { snapshot: Snapshot; 
       <h1 className="font-display text-4xl font-extrabold uppercase sm:text-5xl">{s.contest}</h1>
       <p className="text-sm text-muted">Official results · published {new Date(publishedAt).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
     </div>
-    <div className={`${card} border-accent px-5 py-4 text-xl`}>
+    <div className={`${card} border-l-4 border-l-heart px-5 py-4 text-xl`}>
       {s.winner
         ? <p><span className="text-muted">Winner: </span><strong>{s.winner.name}</strong>{s.winner.reason && <span className="text-base text-muted"> · {s.winner.reason}</span>}</p>
         : <p><strong>No title awarded.</strong>{s.thresholdPct != null && <span className="text-base text-muted"> No contestant reached the {s.thresholdPct}% minimum.</span>}</p>}

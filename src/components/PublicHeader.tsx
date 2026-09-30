@@ -7,6 +7,7 @@ export function PublicHeader() {
   const session = useSession()
   return (
     <header className="border-b border-rule bg-surface">
+      <div className="flag-stripes h-[18px]" aria-hidden />
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
         <Link to="/"><Brand className="text-2xl" /></Link>
         <nav className="flex items-center gap-3 text-sm sm:gap-4">
