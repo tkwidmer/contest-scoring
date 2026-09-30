@@ -17,6 +17,7 @@ Browser (React SPA on Vercel) ──supabase-js──▶ Supabase (Postgres + Au
 ```
 
 There is **no application server**. The browser talks straight to Supabase, and the database enforces every rule.
+(One small Vercel function, `api/page.js`, only adds link-preview tags to shared pages.)
 
 - **Frontend**: Vite, React 19, React Router 7, TypeScript (strict), Tailwind 4. Static files on Vercel
   (`vercel.json` rewrites every path to `index.html`).
@@ -43,7 +44,8 @@ There is **no application server**. The browser talks straight to Supabase, and 
 
 | Path | What's there |
 |---|---|
-| `src/pages/` | One file per route: `Landing`, `Pricing`, `Results` (public); `Home` (dashboard), `OrgHome`, `EventHome`, `Contest*` tabs (Setup, People, Scores, Standings, Comments, History), `JudgeSheet`, `Admin` |
+| `src/pages/` | One file per route: `Landing`, `Pricing`, `Results`, `OrgResults` (public); `Home` (dashboard), `OrgHome`, `EventHome`, `Contest*` tabs (Setup, People, Scores, Standings, Comments, History), `Announce` (stage reveal), `JudgeSheet`, `Admin` |
+| `api/page.js` | The only server code: fills link-preview tags into `index.html` for `/pricing` and `/r/:id` |
 | `src/lib/scoring/` | Scoring engine and its Vitest fixtures |
 | `src/lib/` | Supabase client, generated `database.types.ts`, save queue, invites, error messages, hooks |
 | `src/components/` | Header, brand, shared Tailwind class strings (`ui.ts`) |
