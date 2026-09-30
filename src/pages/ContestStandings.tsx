@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import type { Json } from '../lib/database.types'
 import { supabase } from '../lib/supabase'
@@ -166,8 +166,17 @@ export function ContestStandings() {
     }
   })()
 
-  return (
-    <div className="grid gap-6">
+  // What the tally covers: the finals (or the only round), then the prelims.
+  const sections: TallySection[] = [
+    ...(final ? [{ title: hasRounds ? 'Finals' : 'Standings', result: final, thresholdPct: contest.threshold_pct,
+      categories: names.categories.filter(c => !hasRounds || contest.prelim_carries || c.round === 'final'),
+      note: aggregationText[contest.aggregation]! + scaleNote }] : []),
+    ...(prelim ? [{ title: 'Preliminaries', result: prelim, categories: names.categories.filter(c => c.round === 'prelim'),
+      note: aggregationText[contest.prelim_aggregation]! + scaleNote, finalists: contest.finalists_confirmed_at ? confirmed : null }] : []),
+  ]
+
+  return (<>
+    <div className="grid gap-6 print:hidden">
       <ContestHeader contest={contest} />
       {error && <p role="alert" className="rounded border border-danger px-4 py-3 text-danger print:hidden">{error}</p>}
 
@@ -274,6 +283,136 @@ export function ContestStandings() {
         </div>
       </section>
     </div>
+    <PrintTally contest={contest} banner={banner} sections={sections} names={names} />
+  </>)
+}
+
+// ── Printed tally: its own layout (landscape, set in src/index.css), never the screen tables. A summary, then one
+// block per contestant with every judge's category scores; blocks and rows never split across pages.
+type TallySection = { title: string; result: Result; categories: Named[]; note: string; thresholdPct?: number | null; finalists?: string[] | null }
+
+// The judges who appear in any category, then the cross-panel average and producer entries.
+function breakdownColumns(result: Result, names: Names) {
+  const present = new Set(result.standings.flatMap(s => Object.values(s.breakdown).flat().map(b => b.judgeId)))
+  return [...names.judges.map(j => j.id), CROSS_PANEL, PRODUCER].filter(id => present.has(id))
+}
+
+function PrintTally({ contest, banner, sections, names }: { contest: Contest; banner: ReactNode; sections: TallySection[]; names: Names }) {
+  const name = (id: string) => names.contestants.get(id) ?? 'Unknown'
+  const judge = new Map(names.judges.map(j => [j.id, j]))
+  const judgeName = (id: string) => id === CROSS_PANEL ? 'Cross-panel avg' : id === PRODUCER ? 'Producer' : judge.get(id)?.name ?? ''
+  const cell = 'border border-rule px-1.5 py-0.5'
+  return (
+    <div className="hidden text-[9pt] leading-snug print:block">
+      <header className="flex items-end justify-between gap-4 border-b-2 border-fg pb-2">
+        <div>
+          <p className="text-muted">{contest.events?.name}</p>
+          <h1 className="font-display text-2xl font-extrabold uppercase">{contest.name}: tally</h1>
+        </div>
+        <p className="text-right text-muted">
+          Printed {new Date().toLocaleString()}<br />
+          {contest.finalized_at ? `Finalized ${new Date(contest.finalized_at).toLocaleString()}` : 'Not finalized: results may still change'}
+        </p>
+      </header>
+      <p className="my-3 text-[11pt]">{banner}</p>
+
+      {sections.map(sec => {
+        const threshold = sec.result.thresholdPoints
+        return (
+          <section key={sec.title} className="mt-4">
+            <h2 className="text-[11pt] font-semibold uppercase tracking-wider">{sec.title}</h2>
+            <p className="mb-1.5 text-muted">
+              Max possible {fmt(sec.result.maxPossible)} pts
+              {threshold != null && <> · minimum to win {fmt(threshold)} ({sec.thresholdPct}%)</>} · {sec.note}
+            </p>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="align-bottom">
+                  <th className={`${cell} text-left`}>Rank</th><th className={`${cell} text-left`}>Contestant</th>
+                  {sec.categories.map(c => <th key={c.id} className={`${cell} text-right font-normal`}>{c.name}</th>)}
+                  <th className={`${cell} text-right`}>Total</th><th className={`${cell} text-right`}>%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sec.result.standings.map(s => (
+                  <tr key={s.contestantId} className={`break-inside-avoid ${threshold != null && s.total < threshold ? 'text-muted' : ''}`}>
+                    <td className={`${cell} font-mono`}>{s.rank}</td>
+                    <td className={cell}>{name(s.contestantId)}{sec.finalists?.includes(s.contestantId) && ' (finalist)'}
+                      {threshold != null && s.total < threshold && <span className="text-[8pt]"> · below minimum</span>}</td>
+                    {sec.categories.map(c => <td key={c.id} className={`${cell} text-right font-mono`}>{fmt(s.categoryTotals[c.id] ?? 0)}</td>)}
+                    <td className={`${cell} text-right font-mono font-semibold`}>{fmt(s.total)}</td>
+                    <td className={`${cell} text-right font-mono`}>{pct(s.pct)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )
+      })}
+
+      <footer className="mt-10 grid break-inside-avoid grid-cols-3 gap-8">
+        {['Tally master', 'Head judge', 'Date'].map(l => <p key={l} className="border-t border-fg pt-1 text-muted">{l}</p>)}
+      </footer>
+
+      {/* One page per contestant: every judge's score per category. */}
+      {sections.flatMap(sec => {
+        const cols = breakdownColumns(sec.result, names)
+        return sec.result.standings.map(s => (
+          <section key={`${sec.title}|${s.contestantId}`} className="break-before-page text-[10pt]">
+            <header className="flex items-end justify-between gap-4 border-b-2 border-fg pb-2">
+              <div>
+                <p className="text-muted">{contest.name}{sections.length > 1 && ` · ${sec.title}`}</p>
+                <h2 className="font-display text-2xl font-extrabold uppercase">{name(s.contestantId)}</h2>
+              </div>
+              <p className="text-right text-[11pt]">
+                Rank <strong>{s.rank}</strong> of {sec.result.standings.length} · <strong>{fmt(s.total)}</strong> pts ({pct(s.pct)})
+              </p>
+            </header>
+            <table className="mt-3 w-full border-collapse">
+              <thead>
+                <tr className="align-bottom text-[9pt]">
+                  <th className={`${cell} w-44 text-left font-normal`}>Category</th>
+                  {cols.map(id => (
+                    <th key={id} className={`${cell} text-right font-normal`}>
+                      {judgeName(id)}{judge.get(id)?.guest && <span className="block text-muted">cross-panel</span>}
+                    </th>
+                  ))}
+                  <th className={`${cell} text-right`}>Counted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sec.categories.map(c => (
+                  <tr key={c.id}>
+                    <th className={`${cell} py-1 text-left font-normal`}>{c.name}</th>
+                    {cols.map(id => {
+                      const b = s.breakdown[c.id]?.find(x => x.judgeId === id)
+                      return (
+                        <td key={id} className={`${cell} text-right font-mono ${b?.dropped ? 'text-muted line-through' : ''}`}>
+                          {b ? (b.subtotal == null ? '–' : fmt(b.subtotal)) : ''}{b?.backfilled && <sup>avg</sup>}
+                        </td>
+                      )
+                    })}
+                    <td className={`${cell} text-right font-mono font-semibold`}>{fmt(s.categoryTotals[c.id] ?? 0)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <th colSpan={cols.length + 1} className={`${cell} py-1 text-right`}>Total</th>
+                  <td className={`${cell} text-right font-mono font-semibold`}>{fmt(s.total)}</td>
+                </tr>
+              </tbody>
+            </table>
+            {s.deductions.length > 0 && (
+              <p className="mt-2">Deductions (already taken off Counted): {s.deductions.map(d => `${sec.categories.find(c => c.id === d.categoryId)?.name ?? ''} −${fmt(d.amount)} (${d.label})`).join(', ')}</p>
+            )}
+            {s.tiebreakPath && <p className="mt-2">Tiebreak: {s.tiebreakPath.map(p => `step ${p.step} = ${fmt(p.value)}`).join(', ')}</p>}
+            <p className="mt-3 text-[9pt] text-muted">
+              <s>Struck-through</s> scores were dropped. <sup>avg</sup> marks a recused judge's slot, filled with the other judges' average.
+              Counted is the category score after drops and deductions.
+            </p>
+          </section>
+        ))
+      })}
+    </div>
   )
 }
 
@@ -286,9 +425,7 @@ function StandingsTable({ title, result, names, categories, note, thresholdPct, 
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const name = (id: string) => names.contestants.get(id) ?? 'Unknown'
   const judgeName = new Map<string, string>([...names.judges.map(j => [j.id, j.name] as const), [CROSS_PANEL, 'Cross-panel'], [PRODUCER, 'Producer']])
-  // Breakdown columns: the judges who appear in any category, then the cross-panel average and producer entries.
-  const present = new Set(result.standings.flatMap(s => Object.values(s.breakdown).flat().map(b => b.judgeId)))
-  const breakdownCols = [...names.judges.map(j => j.id), CROSS_PANEL, PRODUCER].filter(id => present.has(id))
+  const breakdownCols = breakdownColumns(result, names)
   const firstBelow = result.thresholdPoints == null ? -1 : result.standings.findIndex(s => s.total < result.thresholdPoints!)
   // The cut line sits after the last contestant ranked within the top N (ties at the line sit below it).
   // Once finalists are confirmed a tie can put a finalist below a non-finalist, so the badge and muting say it instead.
