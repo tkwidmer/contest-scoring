@@ -135,7 +135,7 @@ export function Landing() {
 
       <footer className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 px-4 py-6 text-sm text-muted">
         <Brand className="text-base" />
-        <span>Made for the leather community.</span>
+        <span>Made by and for the leather community.</span>
       </footer>
     </div>
   )
