@@ -74,6 +74,7 @@ export function Login() {
         </form>
       )}
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      <p className="text-xs text-muted">By signing in you agree to our <Link to="/terms" className="underline">terms</Link> and <Link to="/privacy" className="underline">privacy policy</Link>.</p>
     </main>
   )
 }

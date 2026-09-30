@@ -30,6 +30,8 @@ export function PublicFooter() {
         <span>Made by and for the leather community.</span>
         <a href="/features" className="hover:text-fg">Features</a>
         <a href="/roadmap.html" className="hover:text-fg">Roadmap</a>
+        <a href="/privacy" className="hover:text-fg">Privacy</a>
+        <a href="/terms" className="hover:text-fg">Terms</a>
       </span>
     </footer>
   )

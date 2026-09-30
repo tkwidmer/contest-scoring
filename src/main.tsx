@@ -9,6 +9,7 @@ import { Home } from './pages/Home'
 import { Landing } from './pages/Landing'
 import { Pricing } from './pages/Pricing'
 import { Features } from './pages/Features'
+import { Privacy, Terms } from './pages/Legal'
 import { Admin } from './pages/Admin'
 import { JudgeSheet } from './pages/JudgeSheet'
 import { ContestComments } from './pages/ContestComments'
@@ -32,6 +33,8 @@ createRoot(document.getElementById('root')!).render(
           <Route index element={<Landing />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/features" element={<Features />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/r/:contestId" element={<Results />} />
           <Route path="/org/:orgId" element={<OrgResults />} />
           <Route path="/c/:contestId/announce" element={<Announce />} />
