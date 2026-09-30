@@ -407,7 +407,14 @@
               "title": "Custom SMTP for auth email",
               "status": "todo",
               "doc": "design/03-auth-rls.md",
-              "note": "Needs DNS for tallymaster.top and an email provider; until then only the Supabase team can receive sign-in emails on production"
+              "note": "Now only needed for people without Google accounts and for notification emails (P4.4.2); waiting on DNS for tallymaster.top"
+            },
+            {
+              "id": "P2.1.4",
+              "title": "Sign in with Google (no email needed)",
+              "status": "done",
+              "doc": "design/03-auth-rls.md",
+              "note": "Verified on production"
             }
           ]
         },
