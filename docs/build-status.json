@@ -595,7 +595,7 @@
             },
             {
               "id": "P4.2.6",
-              "title": "Printable paper scoresheets (per judge or blank) for judges who can't score online",
+              "title": "Printable paper scoresheets: one page per contestant per category (per judge or blank)",
               "status": "done",
               "doc": "design/04-ux-flows.md"
             }

@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
@@ -6,8 +6,8 @@ import { fmt } from '../lib/scoreCells'
 import { ContestHeader } from '../components/ContestHeader'
 import { button, card, input, label } from '../components/ui'
 
-// Paper scoresheets for judges who score on paper: one portrait page per contestant with the categories this judge
-// scores, each component's range and notes, boxes to write in and a comment area. The tally team types them in
+// Paper scoresheets for judges who score on paper: one portrait page per contestant per category (judges hand one in
+// after each contestant), with each component's range and notes, boxes to write in, a total and a comment area. The tally team types them in
 // afterwards (Scores > By judge sheet), the same page order. Print, or "Save as PDF" in the print dialog.
 type Component = { id: string; name: string; description: string | null; min_points: number; max_points: number; step: number }
 type Category = { id: string; name: string; round: string; scored_by: string; guest_average: boolean; components: Component[] }
@@ -61,6 +61,10 @@ export function ContestSheets() {
     && (!round || c.round === round))
   const people = contestants.filter(p => !(judge && recused.has(`${judge.id}|${p.id}`))
     && !(round === 'final' && contestants.some(x => x.finalist) && !p.finalist))
+  // One sheet per contestant per category, category by category (judges hand one in after each contestant).
+  const categoryId = params.get('category') ?? ''
+  const printed = cats.filter(c => !categoryId || c.id === categoryId)
+  const sheets = printed.flatMap(c => people.map(p => ({ p, c })))
   const who = (p: Contestant) => `${p.number != null ? `#${p.number} · ` : ''}${p.display_name}`
   const range = (k: Component) => `${fmt(k.min_points)}–${fmt(k.max_points)}${k.step !== 1 ? ` in steps of ${fmt(k.step)}` : ''}`
   const box = 'border border-fg'
@@ -69,8 +73,8 @@ export function ContestSheets() {
     <div className="grid gap-6 print:hidden">
       <ContestHeader contest={contest} />
       <p className="max-w-prose text-muted">
-        Paper scoresheets for a judge who can't score on a phone or computer: one page per contestant, with the categories they
-        score and room for comments. Print them, or choose <strong>Save as PDF</strong> in the print dialog. Afterwards, type the
+        Paper scoresheets for a judge who can't score on a phone or computer: one page per contestant for each category, so the
+        judge hands in a sheet after each contestant. Print every category, or one segment at a time. Print them, or choose <strong>Save as PDF</strong> in the print dialog. Afterwards, type the
         scores in on <strong>Scores → By judge sheet</strong>.
       </p>
       <div className={`${card} flex flex-wrap items-end gap-4 p-4`}>
@@ -86,62 +90,63 @@ export function ContestSheets() {
               <option value="final">Finals{contestants.some(x => x.finalist) ? ' (finalists only)' : ''}</option>
             </select></label>
         )}
-        <button className={button} disabled={!cats.length || !people.length} onClick={() => window.print()}>Print {people.length} sheet{people.length === 1 ? '' : 's'}</button>
+        <label className="grid gap-1"><span className={label}>Category</span>
+          <select className={`${input} w-auto`} value={printed.length === 1 && categoryId ? categoryId : ''} onChange={e => set('category', e.target.value)}>
+            <option value="">All categories</option>
+            {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select></label>
+        <button className={button} disabled={!sheets.length} onClick={() => window.print()}>Print {sheets.length} sheet{sheets.length === 1 ? '' : 's'}</button>
       </div>
       {!cats.length && <p className="text-muted">This judge has no categories to score{round ? ' in this round' : ''}.</p>}
       {judge && recused.size > 0 && contestants.length > people.length && <p className="text-sm text-muted">Contestants this judge is recused from are left out.</p>}
       <p className="text-sm text-muted">Preview of the first sheet:</p>
     </div>
 
-    {people.map((p, i) => (
-      <section key={p.id} className={`break-after-page text-[10.5pt] leading-snug text-fg [page:feedback] ${i > 0 ? 'hidden print:block' : `${card} mt-4 p-6 print:border-0 print:p-0`}`}>
+    {sheets.map(({ p, c }, i) => (
+      <section key={`${c.id}|${p.id}`} className={`break-after-page text-[11pt] leading-snug text-fg [page:feedback] ${i > 0 ? 'hidden print:block' : `${card} mt-4 p-6 print:border-0 print:p-0`}`}>
         <header className="flex items-end justify-between gap-4 border-b-2 border-fg pb-2">
           <div>
-            <p className="text-muted">{contest.events?.name}</p>
-            <h1 className="font-display text-2xl font-extrabold uppercase">{contest.name}{round && ` · ${round === 'prelim' ? 'Preliminaries' : 'Finals'}`}</h1>
+            <p className="text-muted">{contest.events?.name} · {contest.name}{round && ` · ${round === 'prelim' ? 'Preliminaries' : 'Finals'}`}</p>
+            <h1 className="font-display text-3xl font-extrabold uppercase">{c.name}</h1>
           </div>
-          <p className="text-right text-muted">Sheet {i + 1} of {people.length}</p>
+          <p className="text-right text-[9pt] text-muted">Sheet {i + 1} of {sheets.length}</p>
         </header>
-        <div className="mt-3 grid grid-cols-2 gap-6">
-          <p>Contestant: <strong className="text-[13pt]">{who(p)}</strong></p>
-          <p>Judge: {judge ? <strong className="text-[13pt]">{judge.name}</strong> : <span className="inline-block w-48 border-b border-fg" />}</p>
+        <div className="mt-4 grid grid-cols-2 gap-6">
+          <p>Contestant: <strong className="text-[14pt]">{who(p)}</strong></p>
+          <p>Judge: {judge ? <strong className="text-[14pt]">{judge.name}</strong> : <span className="inline-block w-48 border-b border-fg" />}</p>
         </div>
-        <table className="mt-4 w-full border-collapse">
+        <table className="mt-6 w-full border-collapse">
           <thead>
             <tr className="text-left text-[9pt] text-muted">
-              <th className="py-1 font-normal">Category / component</th>
+              <th className="py-1 font-normal">Component</th>
               <th className="w-40 py-1 text-right font-normal">Range</th>
-              <th className="w-24 py-1 text-center font-normal">Score</th>
+              <th className="w-28 py-1 text-center font-normal">Score</th>
             </tr>
           </thead>
           <tbody>
-            {cats.map(c => (<Fragment key={c.id}>
-              <tr><td colSpan={3} className="border-t border-fg pt-3 pb-1 font-semibold uppercase tracking-wider">{c.name}</td></tr>
-              {c.components.map(k => (
-                <tr key={k.id} className="break-inside-avoid">
-                  <td className="py-1.5 pr-2">{k.name}{k.description && <span className="block text-[9pt] text-muted">{k.description}</span>}</td>
-                  <td className="whitespace-nowrap py-1.5 text-right font-mono text-[9pt] text-muted">{range(k)}</td>
-                  <td className="py-1.5 pl-3"><div className={`${box} h-9 w-full`} /></td>
-                </tr>
-              ))}
-              <tr className="break-inside-avoid">
-                <td colSpan={3} className="pb-2">
-                  <span className="text-[9pt] text-muted">Comments for the contestant on {c.name} (optional)</span>
-                  <div className="mt-1 h-14 border-b border-dashed border-muted" />
-                </td>
+            {c.components.map(k => (
+              <tr key={k.id} className="border-t border-rule">
+                <td className="py-3 pr-2">{k.name}{k.description && <span className="block text-[9pt] text-muted">{k.description}</span>}</td>
+                <td className="whitespace-nowrap py-3 text-right font-mono text-[9pt] text-muted">{range(k)}</td>
+                <td className="py-3 pl-3"><div className={`${box} h-11 w-full`} /></td>
               </tr>
-            </Fragment>))}
+            ))}
+            {c.components.length > 1 && (
+              <tr className="border-t-2 border-fg">
+                <td className="py-3 font-semibold">Total</td>
+                <td className="whitespace-nowrap py-3 text-right font-mono text-[9pt] text-muted">out of {fmt(c.components.reduce((t, k) => t + k.max_points, 0))}</td>
+                <td className="py-3 pl-3"><div className={`${box} h-11 w-full`} /></td>
+              </tr>
+            )}
           </tbody>
         </table>
-        <div className="mt-4 grid grid-cols-2 gap-6 break-inside-avoid">
-          <div>
-            <span className="text-[9pt] text-muted">Overall comments (optional)</span>
-            <div className="mt-1 h-16 border-b border-dashed border-muted" />
-          </div>
-          <div className="grid content-end gap-4">
-            <p className="flex items-end gap-2">Judge's signature <span className="flex-1 border-b border-fg" /></p>
-            <p className="text-[9pt] text-muted">Tally use: entered by ______ checked by ______</p>
-          </div>
+        <div className="mt-6">
+          <span className="text-[9pt] text-muted">Comments for the contestant (optional)</span>
+          <div className="mt-1 h-40 border border-dashed border-muted" />
+        </div>
+        <div className="mt-8 grid grid-cols-2 gap-6">
+          <p className="flex items-end gap-2">Judge's signature <span className="flex-1 border-b border-fg" /></p>
+          <p className="text-right text-[9pt] text-muted">Tally use: entered by ______ checked by ______</p>
         </div>
       </section>
     ))}
