@@ -1,6 +1,6 @@
 {
   "project": "Tallymaster.top",
-  "updated": "2026-09-30",
+  "updated": "2026-10-02",
   "statuses": [
     "todo",
     "in_progress",
@@ -405,9 +405,9 @@
             {
               "id": "P2.1.3",
               "title": "Custom SMTP for auth email",
-              "status": "todo",
+              "status": "done",
               "doc": "design/03-auth-rls.md",
-              "note": "Now only needed for people without Google accounts and for notification emails (P4.4.2); waiting on DNS for tallymaster.top"
+              "note": "Resend with noreply@tallymaster.top, plus Google sign-in"
             },
             {
               "id": "P2.1.4",
@@ -650,9 +650,10 @@
             },
             {
               "id": "P4.4.2",
-              "title": "Email notifications (needs custom SMTP)",
-              "status": "todo",
-              "doc": "design/06-roadmap.md"
+              "title": "Email platform admins when an event requests approval",
+              "status": "done",
+              "doc": "design/06-roadmap.md",
+              "note": "Sent from the database via Resend; needs the resend_api_key Vault secret"
             },
             {
               "id": "P4.4.3",

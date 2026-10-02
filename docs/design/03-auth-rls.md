@@ -49,6 +49,7 @@ Invariants the policies must keep:
 ## Event approval (D25)
 - `events.approved_at/by` and `approval_requested_at/by` are not client-writable (column-level insert and update grants).
 - `request_event_approval(event)`: producers of the event's org. `set_event_approval(event, bool)` and `event_approvals()` (the queue, with the requester's email): platform admins only.
+- Requesting approval emails every platform admin (trigger `events_notify_approval` → Resend via `pg_net`, API key in Vault as `resend_api_key`; replies go to the requester). No key, no email.
 - `set_contest_status` refuses draft → scoring while the event is unapproved, or outside 14 days either side of its date (the approval date for events approved before dates were required). `request_event_approval` needs a date; a trigger locks `starts_on` while approved. Tests: `supabase/tests/event_approval.test.sql`.
 
 ## Judge and member onboarding (P2, D26)
