@@ -5,7 +5,7 @@ Scoring and tabulation for leather, bear and bootblack title contests. Producers
 minimum to award the title); judges score on their phones; standings update live; results are finalized,
 audited, printed and published.
 
-Live at [contest-scoring.vercel.app](https://contest-scoring.vercel.app) (moving to tallymaster.top).
+Live at [tallymaster.top](https://tallymaster.top) (also [contest-scoring.vercel.app](https://contest-scoring.vercel.app)).
 Design docs are in [`docs/design/`](docs/design/00-overview.md); build progress is tracked in
 [`docs/build-status.json`](docs/build-status.json) and rendered by [`docs/build-dashboard.html`](docs/build-dashboard.html).
 

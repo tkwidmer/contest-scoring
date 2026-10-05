@@ -109,7 +109,7 @@
               "title": "Vercel project, env vars, SPA rewrite",
               "status": "done",
               "doc": "design/05-architecture.md",
-              "note": "Live at contest-scoring.vercel.app"
+              "note": "Live at www.tallymaster.top and contest-scoring.vercel.app"
             }
           ]
         },
@@ -350,7 +350,7 @@
               "title": "Tallymaster.top branding and public landing page",
               "status": "done",
               "doc": "design/04-ux-flows.md",
-              "note": "Custom domain tallymaster.top not configured yet"
+              "note": "Live at www.tallymaster.top (apex redirects to www)"
             },
             {
               "id": "P1.6.14",
