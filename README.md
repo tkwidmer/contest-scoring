@@ -97,8 +97,9 @@ generated-types check), and **e2e** (Playwright against a fresh local stack).
 
 ## Deploy
 
-- **Frontend**: Vercel builds and deploys every push to `main`. The project needs `VITE_SUPABASE_URL` and
-  `VITE_SUPABASE_ANON_KEY` (the publishable key only).
+- **Frontend**: Vercel builds and deploys every push to `main`. The project needs `VITE_SUPABASE_URL`,
+  `VITE_SUPABASE_ANON_KEY` (the publishable key only) and `VITE_GOOGLE_CLIENT_ID` (the OAuth client ID set on Supabase's
+  Google provider; the site must be an authorized JavaScript origin on that client).
 - **Database**: apply new migrations to the hosted project *before* pushing code that depends on them:
   `npx supabase link --project-ref assvtegfewidtrzukhbr` then `npx supabase db push`. Afterwards, check the
   Supabase security advisors.
