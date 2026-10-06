@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(7);
+select plan(8);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'alice@test.dev'),
@@ -48,6 +48,7 @@ select is((select org_id::text from public.published_results where contest_id = 
 select results_eq($$ select snapshot ->> 'org', snapshot -> 'prelim' -> 0 ->> 'name', snapshot -> 'prelim' -> 0 -> 'total' from public.published_results where contest_id = current_setting('test.c')::uuid $$,
   $$ values ('GLL'::text, 'B'::text, null::jsonb) $$, 'the snapshot names the org and lists prelim placings (no totals when winner-only)');
 select is((select count(*)::int from public.published_results where org_id = current_setting('test.org')::uuid), 1, 'anyone can list an org''s published results');
+select is((select snapshot ->> 'date' from public.published_results where contest_id = current_setting('test.c')::uuid), (current_date + 7)::text, 'the snapshot carries the event date (for the public Contests page)');
 
 select * from finish();
 rollback;

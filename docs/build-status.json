@@ -1,6 +1,6 @@
 {
   "project": "Tallymaster.top",
-  "updated": "2026-10-02",
+  "updated": "2026-10-06",
   "statuses": [
     "todo",
     "in_progress",
@@ -635,6 +635,12 @@
               "title": "Organization public page listing published results",
               "status": "done",
               "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.3.5",
+              "title": "Public Contests index: every published contest with its date and winner",
+              "status": "done",
+              "doc": "design/04-ux-flows.md"
             }
           ]
         },

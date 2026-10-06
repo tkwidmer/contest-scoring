@@ -17,6 +17,7 @@ The producer UI is built for desktop and tablet first, because it's often used o
 | `/c/:contest/comments` | P | Review and share judges' comments |
 | `/c/:contest/history` | P | Audit trail of scores and sheets; all-scores CSV |
 | `/r/:contest` | anyone | Published results |
+| `/contests` | anyone | Every published contest, newest event first: date, contest, event, organization, winner; searchable |
 | `/c/:contest/comments` | P | Review, edit and approve comments, then export |
 | `/dashboard` | all | Judging (my seats), then my organizations |
 | `/judge/:contest` | J | My sheets for that contest |
