@@ -34,6 +34,7 @@ export function ContestSetup() {
   const [error, setError] = useState('')
   const role = useContestRole(contestId)
   const isProducer = role === 'producer'
+  const inspecting = role === 'admin' // platform admins look but don't touch
 
   const load = useCallback(async () => {
     const [c, cats, st] = await Promise.all([
@@ -128,19 +129,19 @@ export function ContestSetup() {
               ? '🔒 Scoring has started, so the scoresheet, scoring method and threshold are locked. You can still rename the contest.'
               : `🔒 This contest is ${contest.status}.`}
         </p>
-        {contest.status === 'draft' && (
+        {contest.status === 'draft' && !inspecting && (
           <button type="button" className={buttonQuiet} disabled={busy} onClick={() =>
             window.confirm('Start scoring? The scoresheet, scoring method and threshold will be locked.') &&
             run(supabase.rpc('set_contest_status', { p_contest: contest.id, p_status: 'scoring' }))}>Start scoring</button>
         )}
-        {contest.status === 'scoring' && (
+        {contest.status === 'scoring' && !inspecting && (
           <button type="button" className={buttonQuiet} disabled={busy}
             onClick={() => run(supabase.rpc('set_contest_status', { p_contest: contest.id, p_status: 'draft' }))}>Back to draft</button>
         )}
       </div>
       {error && <p role="alert" className="rounded border border-danger px-4 py-3 text-danger">{error}</p>}
 
-      <fieldset disabled={busy} className="grid gap-10">
+      <fieldset disabled={busy || inspecting} className="grid gap-10">
         {/* ── Settings ── */}
         <section className="grid gap-4">
           <h2 className={h2}>Settings</h2>
@@ -370,7 +371,7 @@ export function ContestSetup() {
           </div>
         </section>
         {/* ── Template ── */}
-        <section className="grid gap-3">
+        {!inspecting && <section className="grid gap-3">
           <h2 className={h2}>Save as template</h2>
           <p className="max-w-prose text-sm text-muted">
             Reuse this scoresheet, scoring method, minimum and tiebreaks for future contests. Contestants, judges and scores are not included.
@@ -393,7 +394,7 @@ export function ContestSetup() {
             <button className={buttonQuiet}>Save template</button>
           </form>
           {tpl.saved && <p role="status" className="text-sm text-muted">Saved "{tpl.saved}". It's now available when adding a contest.</p>}
-        </section>
+        </section>}
       </fieldset>
     </div>
   )

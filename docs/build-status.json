@@ -673,6 +673,12 @@
               "title": "Admin date editor for approved events",
               "status": "done",
               "doc": "design/06-roadmap.md"
+            },
+            {
+              "id": "P4.4.4",
+              "title": "Platform admin inspects any contest (setup, people, live scores, standings) read-only, from the approvals page",
+              "status": "done",
+              "doc": "design/03-auth-rls.md"
             }
           ]
         }

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
-export type Role = 'producer' | 'tabulator' | 'judge' | 'none'
+export type Role = 'producer' | 'tabulator' | 'judge' | 'admin' | 'none'
 
 // The viewer's role in this contest's organization, or 'judge' for a judge with no org role.
+// A contest visible to someone who is neither is visible only to a platform admin (RLS): 'admin' inspects it read-only.
 export function useContestRole(contestId: string): Role | null {
   const [role, setRole] = useState<Role | null>(null)
   useEffect(() => {
@@ -15,7 +16,7 @@ export function useContestRole(contestId: string): Role | null {
         supabase.from('org_members').select('role').eq('org_id', c.data.org_id).eq('user_id', uid).maybeSingle(),
         supabase.from('judges').select('id').eq('contest_id', contestId).eq('user_id', uid).maybeSingle(),
       ])
-      setRole((m.data?.role as Role | undefined) ?? (j.data ? 'judge' : 'none'))
+      setRole((m.data?.role as Role | undefined) ?? (j.data ? 'judge' : 'admin'))
     })()
   }, [contestId])
   return role
