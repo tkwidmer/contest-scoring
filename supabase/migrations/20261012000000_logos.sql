@@ -12,6 +12,9 @@ values ('logos', 'logos', true, 1048576, array['image/png', 'image/jpeg', 'image
 
 create policy "logos: producers upload" on storage.objects for insert to authenticated
   with check (bucket_id = 'logos' and private.is_org_member(((storage.foldername(name))[1])::uuid, array['producer']));
+-- Deleting a row also needs to see it, so producers get a select policy (public reads don't go through RLS).
+create policy "logos: producers read" on storage.objects for select to authenticated
+  using (bucket_id = 'logos' and private.is_org_member(((storage.foldername(name))[1])::uuid, array['producer']));
 create policy "logos: producers delete" on storage.objects for delete to authenticated
   using (bucket_id = 'logos' and private.is_org_member(((storage.foldername(name))[1])::uuid, array['producer']));
 
