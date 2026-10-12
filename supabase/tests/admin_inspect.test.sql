@@ -24,8 +24,8 @@ insert into public.judges (contest_id, name) values (current_setting('test.c')::
 
 -- Scoring is under way: one scored and submitted sheet, a deduction, and a frozen result.
 reset role;
-update public.categories set deductions = '[{"label":"Over time","points":5}]'::jsonb;
-update public.contests set status = 'scoring', final_result = '{"winner":"Rex"}'::jsonb;
+update public.categories set deductions = '[{"label":"Over time","points":5}]'::jsonb where contest_id = current_setting('test.c')::uuid;
+update public.contests set status = 'scoring', final_result = '{"winner":"Rex"}'::jsonb where id = current_setting('test.c')::uuid;
 set local role authenticated;
 insert into public.scores (judge_id, contestant_id, component_id, value)
   select j.id, c.id, k.id, 8 from public.judges j, public.contestants c, public.components k;
