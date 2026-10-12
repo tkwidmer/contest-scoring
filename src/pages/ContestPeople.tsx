@@ -6,6 +6,7 @@ import { useWrites } from '../lib/useWrites'
 import { copyInvite, sendSignInLink } from '../lib/invites'
 import { parseContestants, parseJudges } from '../lib/bulk'
 import { ContestHeader } from '../components/ContestHeader'
+import { useContestRole } from '../lib/useContestRole'
 import { button, buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
 
 type Contest = { id: string; name: string; status: string; org_id: string; event_id: string; events: { name: string } | null }
@@ -57,6 +58,7 @@ export function ContestPeople() {
   useEffect(() => { load() }, [load])
 
   const { busy, run, saveField } = useWrites(load, setError)
+  const inspecting = useContestRole(contestId) === 'admin' // platform admins look but don't touch
 
   if (!contest) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
@@ -127,7 +129,7 @@ export function ContestPeople() {
       {error && <p role="alert" className="rounded border border-danger px-4 py-3 text-danger">{error}</p>}
       {notice && <p role="status" className="rounded border border-accent px-4 py-3">{notice}</p>}
 
-      <fieldset disabled={busy} className="grid gap-10">
+      <fieldset disabled={busy || inspecting} className="grid gap-10">
         {/* ── Contestants ── */}
         <section className="grid gap-3">
           <h2 className={h2}>Contestants · {contestants.filter(c => !c.withdrawn).length}</h2>
@@ -215,7 +217,7 @@ export function ContestPeople() {
               {judges.map(j => (
                 <li key={j.id} className="grid items-center gap-2 px-3 py-2 sm:grid-cols-[2fr_2fr_auto_auto_auto]">
                   {text(j.name, v => run(supabase.from('judges').update({ name: v ?? j.name }).eq('id', j.id)), { 'aria-label': `${j.name} name` })}
-                  {text(j.email, v => run(supabase.from('judges').update({ email: v }).eq('id', j.id)), { 'aria-label': `${j.name} email`, type: 'email' })}
+                  {inspecting ? <span /> : text(j.email, v => run(supabase.from('judges').update({ email: v }).eq('id', j.id)), { 'aria-label': `${j.name} email`, type: 'email' })}
                   <label className="flex items-center gap-1 text-xs text-muted" title="Scores only cross-panel categories; the cross-panel judges' average counts as one more judge">
                     <input type="checkbox" checked={j.guest} disabled={!isProducer}
                       onChange={e => run(supabase.from('judges').update({ guest: e.target.checked }).eq('id', j.id))} /> cross-panel

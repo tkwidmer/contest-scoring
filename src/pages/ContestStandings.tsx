@@ -6,6 +6,7 @@ import { friendly } from '../lib/errors'
 import { useWrites } from '../lib/useWrites'
 import { CROSS_PANEL, PRODUCER, computeContest, type Aggregation, type Deduction, type Result, type Rounds, type ScoringInput } from '../lib/scoring'
 import { ContestHeader } from '../components/ContestHeader'
+import { useContestRole } from '../lib/useContestRole'
 import { button, buttonQuiet, card, h2, input } from '../components/ui'
 
 type Contest = {
@@ -103,6 +104,7 @@ export function ContestStandings() {
   }, [contestId, load])
 
   const { busy, run } = useWrites(load, setError)
+  const inspecting = useContestRole(contestId) === 'admin' // platform admins watch standings but don't act on them
 
   if (!contest || !input_ || !names) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
@@ -212,7 +214,7 @@ export function ContestStandings() {
       {[...(prelim?.warnings ?? []), ...(final?.warnings ?? [])].filter((w, i, a) => a.indexOf(w) === i)
         .map(w => <p key={w} className="rounded border border-rule px-4 py-2 text-sm">⚠ {w}</p>)}
 
-      {final?.winner.kind === 'tie_unresolved' && !finalized && (
+      {final?.winner.kind === 'tie_unresolved' && !finalized && !inspecting && (
         <div className={`${card} grid gap-2 px-4 py-3 sm:grid-cols-[auto_1fr_auto] sm:items-end print:hidden`}>
           <label className="grid gap-1 text-sm"><span className="text-muted">Winner</span>
             <select className={input} value={manual.id} onChange={e => setManual({ ...manual, id: e.target.value })}>
@@ -233,17 +235,17 @@ export function ContestStandings() {
         <span className="flex-1" />
         <button className={buttonQuiet} onClick={() => window.print()}>Print tally</button>
         {finalized && <Link to={`/c/${contest.id}/announce`} className={buttonQuiet}>Announce on screen</Link>}
-        {contest.status === 'scoring' && final && (final.winner.kind === 'decided' || final.winner.kind === 'no_title') && (
+        {contest.status === 'scoring' && !inspecting && final && (final.winner.kind === 'decided' || final.winner.kind === 'no_title') && (
           <button className={button} disabled={busy} onClick={finalize}>Finalize results</button>
         )}
-        {contest.status === 'finalized' && (
+        {contest.status === 'finalized' && !inspecting && (
           <button className={buttonQuiet} disabled={busy} onClick={() =>
             window.confirm('Reopen scoring? The finalized result is discarded until you finalize again.') &&
             run(supabase.rpc('set_contest_status', { p_contest: contest.id, p_status: 'scoring' }))}>Reopen scoring</button>
         )}
       </div>
 
-      {finalized && <Publish contestId={contest.id} published={contest.status === 'published'} onChange={load} />}
+      {finalized && !inspecting && <Publish contestId={contest.id} published={contest.status === 'published'} onChange={load} />}
 
       {final && (
         <StandingsTable title={hasRounds ? 'Finals' : 'Standings'} result={final} names={names}
@@ -266,7 +268,7 @@ export function ContestStandings() {
                   <div className="flex flex-wrap gap-3">
                     {prelim.cut.tied.map(id => (
                       <label key={id} className="flex items-center gap-1">
-                        <input type="checkbox" aria-label={`Advance ${name(id)}`} checked={(cutPicks.length ? cutPicks : confirmed).includes(id)}
+                        <input type="checkbox" aria-label={`Advance ${name(id)}`} disabled={inspecting} checked={(cutPicks.length ? cutPicks : confirmed).includes(id)}
                           onChange={e => setCutPicks(p => { const base = p.length ? p : confirmed.filter(x => prelim.cut.tied.includes(x)); return e.target.checked ? [...base, id] : base.filter(x => x !== id) })} /> {name(id)}
                       </label>
                     ))}
@@ -280,7 +282,7 @@ export function ContestStandings() {
                     : <span className="text-muted">Pick {prelim.cut.slots} from the tie to complete the list.</span>}
                 </span>
                 <span className="flex-1" />
-                <button className={contest.finalists_confirmed_at ? buttonQuiet : button} disabled={busy || !prelim.cut.proposed || contest.status !== 'scoring'}
+                <button className={contest.finalists_confirmed_at ? buttonQuiet : button} disabled={busy || inspecting || !prelim.cut.proposed || contest.status !== 'scoring'}
                   onClick={() => prelim.cut.proposed && confirmCut(prelim.cut.proposed)}>
                   {contest.finalists_confirmed_at ? 'Re-confirm finalists' : 'Confirm finalists'}
                 </button>
