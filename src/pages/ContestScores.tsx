@@ -6,6 +6,7 @@ import { cellKey, createSaveQueue, type Cell, type QueueState } from '../lib/sav
 import { fmt, problem, sendCell, type ScoreComponent } from '../lib/scoreCells'
 import type { TablesInsert } from '../lib/database.types'
 import { ContestHeader } from '../components/ContestHeader'
+import { useContestRole } from '../lib/useContestRole'
 import { buttonQuiet, card, h2, iconButton, input } from '../components/ui'
 
 type Component = ScoreComponent
@@ -39,6 +40,7 @@ export function ContestScores() {
   const [locks, setLocks] = useState<Set<string>>(new Set()) // judge|contestant|category of submitted sheets
   const queue = useMemo(() => createSaveQueue({ storageKey: `scores:${contestId}`, send: sendCell }), [contestId])
   const [sync, setSync] = useState<QueueState>({ pending: 0, failing: new Map(), offline: false })
+  const inspecting = useContestRole(contestId) === 'admin' // platform admins watch scoring but don't touch it
 
   const load = useCallback(async () => {
     const [c, cats, cs, js, rs, sc, pn, sub] = await Promise.all([
@@ -85,7 +87,7 @@ export function ContestScores() {
 
   if (!contest) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
-  const editable = contest.status === 'scoring'
+  const editable = contest.status === 'scoring' && !inspecting
   const rounds = contest.finalist_count != null
   const finalsOnly = (cat: Category) => rounds && cat.round === 'final'
   const catOf = new Map(categories.flatMap(c => c.components.map(k => [k.id, c] as const)))
@@ -180,7 +182,7 @@ export function ContestScores() {
             <Picker label="Contestant" value={contestantId} onChange={setContestantId} options={contestants} stepper />
           </div>
           <h2 className={h2}>{judgeId === PRODUCER ? 'Producer-entered scores' : `${nameOf(judges, judgeId)}'s sheet`} for {nameOf(contestants, contestantId)}</h2>
-          {judgeId !== PRODUCER && <Link to={`/c/${contestId}/sheets?judge=${judgeId}`} className="justify-self-start text-sm text-accent underline">Print paper scoresheets for {nameOf(judges, judgeId)}</Link>}
+          {judgeId !== PRODUCER && !inspecting && <Link to={`/c/${contestId}/sheets?judge=${judgeId}`} className="justify-self-start text-sm text-accent underline">Print paper scoresheets for {nameOf(judges, judgeId)}</Link>}
           <div className={`${card} max-w-xl overflow-x-auto`}>
             <table className="w-full text-sm">
               <tbody>

@@ -217,7 +217,7 @@ export function ContestPeople() {
               {judges.map(j => (
                 <li key={j.id} className="grid items-center gap-2 px-3 py-2 sm:grid-cols-[2fr_2fr_auto_auto_auto]">
                   {text(j.name, v => run(supabase.from('judges').update({ name: v ?? j.name }).eq('id', j.id)), { 'aria-label': `${j.name} name` })}
-                  {text(j.email, v => run(supabase.from('judges').update({ email: v }).eq('id', j.id)), { 'aria-label': `${j.name} email`, type: 'email' })}
+                  {inspecting ? <span /> : text(j.email, v => run(supabase.from('judges').update({ email: v }).eq('id', j.id)), { 'aria-label': `${j.name} email`, type: 'email' })}
                   <label className="flex items-center gap-1 text-xs text-muted" title="Scores only cross-panel categories; the cross-panel judges' average counts as one more judge">
                     <input type="checkbox" checked={j.guest} disabled={!isProducer}
                       onChange={e => run(supabase.from('judges').update({ guest: e.target.checked }).eq('id', j.id))} /> cross-panel

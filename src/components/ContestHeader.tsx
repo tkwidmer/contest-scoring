@@ -28,7 +28,7 @@ export function ContestHeader({ contest }: Props) {
       </div>
       {role === 'admin' && <p className="rounded border border-rule px-4 py-2 text-sm text-muted print:hidden">Inspecting as a platform admin: read-only.</p>}
       <nav className="flex gap-1 overflow-x-auto border-b border-rule print:hidden" aria-label="Contest sections">
-        {tabs.filter(t => role === 'admin' ? t.to === 'setup' || t.to === 'people' : !t.producersOnly || role === 'producer').map(t => (
+        {tabs.filter(t => !t.producersOnly || role === 'producer').map(t => (
           <NavLink key={t.to} to={`/c/${contest.id}/${t.to}`}
             className={({ isActive }) => `-mb-px border-b-2 px-3 py-2 text-sm ${isActive ? 'border-accent text-fg' : 'border-transparent text-muted hover:text-fg'}`}>
             {t.label}
