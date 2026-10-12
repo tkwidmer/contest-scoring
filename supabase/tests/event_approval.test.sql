@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(21);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'alice@test.dev'),
@@ -42,7 +42,7 @@ select throws_ok($$ select public.request_event_approval(current_setting('test.e
 
 -- The platform admin sees the request, with who asked, and approves it.
 select set_config('request.jwt.claims', '{"sub":"99999999-9999-9999-9999-999999999999","role":"authenticated"}', true);
-select results_eq($$ select event_name, org_name, requested_by_email, approved_at is null from public.event_approvals() where event_id = current_setting('test.event')::uuid $$,
+select results_eq($$ select event_name, org_name, owner_email, approved_at is null from public.event_approvals() where event_id = current_setting('test.event')::uuid $$,
   $$ values ('GLL 2027'::text, 'GLL'::text, 'alice@test.dev'::text, true) $$, 'admin sees the request');
 select lives_ok($$ select public.set_event_approval(current_setting('test.event')::uuid, true) $$, 'admin approves');
 
@@ -76,6 +76,13 @@ select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-1111111
 select lives_ok($$ select public.set_contest_status(current_setting('test.c')::uuid, 'draft') $$, 'a scoring contest can still go back to draft');
 select throws_ok($$ select public.set_contest_status(current_setting('test.c')::uuid, 'scoring') $$, 'P0001', null,
   'but cannot start again until re-approved');
+
+-- An event nobody has requested approval for still shows its org's producer, so the admin can reach out.
+reset role;
+insert into public.events (org_id, name) values (current_setting('test.org')::uuid, 'Quiet event');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"99999999-9999-9999-9999-999999999999","role":"authenticated"}', true);
+select is((select owner_email from public.event_approvals() where event_name = 'Quiet event'), 'alice@test.dev', 'unrequested event shows the producer');
 
 select * from finish();
 rollback;

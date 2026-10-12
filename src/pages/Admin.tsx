@@ -29,7 +29,7 @@ export function Admin() {
   return (
     <div className="grid gap-6">
       <h1 className={h1}>Event approvals</h1>
-      <p className="max-w-prose text-muted">Approve an event once its $100 fee is paid. Requests come first; email the requester how to pay. Open an event to inspect its contests (read-only).</p>
+      <p className="max-w-prose text-muted">Approve an event once its $100 fee is paid. Requests come first; email the owner how to pay. Open an event to inspect its contests (read-only).</p>
       {error && <p role="alert" className="text-danger">{error}</p>}
       {rows && (
         <div className={`${card} overflow-x-auto`}>
@@ -52,9 +52,9 @@ export function Admin() {
                         const { error } = await supabase.rpc('set_event_date', { p_event: r.event_id, p_date: e.target.value })
                         if (error) setError(friendly(error)); else load()
                       }} /></td>
-                  <td className="px-3">{r.org_name}</td>
+                  <td className="px-3">{r.org_name}{r.owner_email && <a href={`mailto:${r.owner_email}`} className="block text-xs text-accent">{r.owner_email}</a>}</td>
                   <td className="px-3 font-mono">{r.contests}</td>
-                  <td className="px-3">{date(r.requested_at)}{r.requested_by_email && <a href={`mailto:${r.requested_by_email}`} className="block text-xs text-accent">{r.requested_by_email}</a>}</td>
+                  <td className="px-3">{date(r.requested_at)}</td>
                   <td className="px-3">{r.approved_at ? `Approved ${date(r.approved_at)}` : r.requested_at ? 'Awaiting payment' : 'Not requested'}</td>
                   <td className="px-3 py-2 text-right">
                     {r.approved_at

@@ -592,7 +592,7 @@ isOneToOne: false
                            },
 "event_approvals":
 { Args: Record<PropertyKey, never>; Returns: {
-              "approved_at": string,"contests": number,"event_id": string,"event_name": string,"org_name": string,"requested_at": string,"requested_by_email": string,"starts_on": string
+              "approved_at": string,"contests": number,"event_id": string,"event_name": string,"org_name": string,"owner_email": string,"requested_at": string,"starts_on": string
             }[]
                            },
 "finalize_contest":
