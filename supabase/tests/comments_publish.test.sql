@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(29);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'alice@test.dev'),   -- producer
@@ -90,6 +90,8 @@ select public.finalize_contest(current_setting('test.c')::uuid, jsonb_build_obje
 select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
 select throws_ok($$ select public.publish_contest(current_setting('test.c')::uuid, true) $$, '42501', null, 'tabulators cannot publish');
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+update public.contests set logo_path = 'o/contest.png' where id = current_setting('test.c')::uuid;
+update public.events set logo_path = 'o/event.png';
 select lives_ok($$ select public.publish_contest(current_setting('test.c')::uuid, false) $$, 'producer publishes the winner only');
 select is((select status from public.contests where id = current_setting('test.c')::uuid), 'published', 'the contest is published');
 
@@ -98,6 +100,8 @@ set local role anon;
 select results_eq($$ select snapshot -> 'winner' ->> 'name', snapshot -> 'standings' -> 0 ->> 'name', snapshot -> 'standings' -> 0 -> 'total' from public.published_results where contest_id = current_setting('test.c')::uuid $$,
   $$ values ('A'::text, 'A'::text, null::jsonb) $$, 'anyone reads it; winner-only has no totals');
 select is((select count(*)::int from public.contests) + (select count(*)::int from public.scores), 0, 'anonymous visitors read no live tables');
+select results_eq($$ select snapshot ->> 'logo', snapshot ->> 'eventLogo' from public.published_results where contest_id = current_setting('test.c')::uuid $$,
+  $$ values ('o/contest.png'::text, 'o/event.png'::text) $$, 'the snapshot carries both logos');
 select ok((select snapshot::text !~ '(J1|J2|private\.dev|pacing)' from public.published_results where contest_id = current_setting('test.c')::uuid), 'no judges, emails or comments in the snapshot');
 reset role;
 set local role authenticated;

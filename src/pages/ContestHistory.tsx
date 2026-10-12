@@ -21,7 +21,7 @@ export function ContestHistory() {
 
   const load = useCallback(async () => {
     const [c, cats, cs, js, sa, sh, sc] = await Promise.all([
-      supabase.from('contests').select('id, name, status, event_id, events(name)').eq('id', contestId).maybeSingle(),
+      supabase.from('contests').select('id, name, logo_path, status, event_id, events(name)').eq('id', contestId).maybeSingle(),
       supabase.from('categories').select('id, name, components(id, name)').eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
       supabase.from('contestants').select('id, display_name, number').eq('contest_id', contestId).order('sort'),
       supabase.from('judges').select('id, name, user_id').eq('contest_id', contestId).order('sort'),

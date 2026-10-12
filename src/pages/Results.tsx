@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { Logo } from '../components/Logo'
 import { card } from '../components/ui'
 import { PublicFooter, PublicHeader } from '../components/PublicHeader'
 
 // Public results at /r/:contest, no sign-in. Reads only the published snapshot (publish_contest), never live tables.
 export type Snapshot = {
-  org?: string; contest: string; event: string
+  org?: string; contest: string; event: string; logo?: string | null; eventLogo?: string | null
   prelim?: { rank: number; name: string; number?: number; finalist?: boolean; total?: number; pct?: number }[]
   winner: { name: string; reason: string | null } | null
   maxPossible?: number; thresholdPct: number | null
@@ -44,10 +45,13 @@ export function Results() {
 export function ResultsView({ snapshot: s, publishedAt }: { snapshot: Snapshot; publishedAt: string }) {
   const full = !!s.categories
   return (<>
-    <div className="grid gap-1">
-      <p className="text-sm text-muted">{s.event}</p>
-      <h1 className="font-display text-4xl font-extrabold uppercase sm:text-5xl">{s.contest}</h1>
-      <p className="text-sm text-muted">Official results · published {new Date(publishedAt).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
+    <div className="flex flex-wrap items-center gap-6">
+      <Logo path={s.logo} alt={`${s.contest} logo`} className="h-28" />
+      <div className="grid gap-1">
+        <p className="flex items-center gap-2 text-sm text-muted"><Logo path={s.eventLogo} alt={`${s.event} logo`} className="h-8" />{s.event}</p>
+        <h1 className="font-display text-4xl font-extrabold uppercase sm:text-5xl">{s.contest}</h1>
+        <p className="text-sm text-muted">Official results · published {new Date(publishedAt).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
+      </div>
     </div>
     <div className={`${card} border-l-4 border-l-heart px-5 py-4 text-xl`}>
       {s.winner

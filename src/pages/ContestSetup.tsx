@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
 import { generateTiebreakSteps } from '../lib/scoring'
 import { useWrites } from '../lib/useWrites'
+import { LogoUpload } from '../components/Logo'
 import { ContestHeader } from '../components/ContestHeader'
 import { useContestRole } from '../lib/useContestRole'
 import { buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
@@ -16,7 +17,7 @@ type Category = {
 }
 type Step = { step_no: number; category_ids: string[]; all_judges: boolean }
 type Contest = {
-  id: string; name: string; status: string; aggregation: string; threshold_pct: number | null
+  id: string; name: string; logo_path: string | null; org_id: string; status: string; aggregation: string; threshold_pct: number | null
   anonymize_comments: boolean; event_id: string; events: { name: string } | null
   finalist_count: number | null; prelim_aggregation: string; prelim_carries: boolean; report_as: string; threshold_single_only: boolean
 }
@@ -37,7 +38,7 @@ export function ContestSetup() {
   const load = useCallback(async () => {
     const [c, cats, st] = await Promise.all([
       supabase.from('contests')
-        .select('id, name, status, org_id, aggregation, threshold_pct, anonymize_comments, event_id, events(name), finalist_count, prelim_aggregation, prelim_carries, report_as, threshold_single_only')
+        .select('id, name, logo_path, status, org_id, aggregation, threshold_pct, anonymize_comments, event_id, events(name), finalist_count, prelim_aggregation, prelim_carries, report_as, threshold_single_only')
         .eq('id', contestId).maybeSingle(),
       supabase.from('categories')
         .select('id, name, sort, drop_rank, round, scored_by, guest_average, deductions, components(id, name, description, min_points, max_points, step, sort)')
@@ -143,6 +144,8 @@ export function ContestSetup() {
         {/* ── Settings ── */}
         <section className="grid gap-4">
           <h2 className={h2}>Settings</h2>
+          {isProducer && <LogoUpload title="Contest logo" orgId={contest.org_id} table="contests" id={contest.id} path={contest.logo_path} onChange={load} />}
+          {contest.status === 'published' && <p className="text-xs text-muted">Logos reach the public results when you publish. To update a published page, unpublish and publish again.</p>}
           <div className="grid items-start gap-4 sm:grid-cols-2">
             <div className="grid gap-1">
               <label htmlFor="c-name" className={label}>Contest name</label>
