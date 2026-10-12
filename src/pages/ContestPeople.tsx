@@ -34,7 +34,7 @@ export function ContestPeople() {
 
   const load = useCallback(async () => {
     const [c, cs, js, rs, me] = await Promise.all([
-      supabase.from('contests').select('id, name, status, org_id, event_id, events(name)').eq('id', contestId).maybeSingle(),
+      supabase.from('contests').select('id, name, logo_path, status, org_id, event_id, events(name)').eq('id', contestId).maybeSingle(),
       supabase.from('contestants')
         .select('id, display_name, number, represents, sort, withdrawn, contestant_contacts(email)')
         .eq('contest_id', contestId).order('sort').order('created_at'),

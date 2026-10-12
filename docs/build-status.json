@@ -641,6 +641,13 @@
               "title": "Public Contests index: every published contest with its date and winner",
               "status": "done",
               "doc": "design/04-ux-flows.md"
+            },
+            {
+              "id": "P4.3.6",
+              "title": "Contest and event logos: producers upload, shown to organizers and on public results",
+              "status": "done",
+              "doc": "design/04-ux-flows.md",
+              "note": "Public logos bucket; the logo paths ride in the published snapshot, so re-publish to show a new logo"
             }
           ]
         },

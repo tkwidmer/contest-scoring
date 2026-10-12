@@ -29,7 +29,7 @@ export function ContestSheets() {
 
   const load = useCallback(async () => {
     const [c, cats, js, cs, rs] = await Promise.all([
-      supabase.from('contests').select('id, name, status, event_id, finalist_count, events(name)').eq('id', contestId).maybeSingle(),
+      supabase.from('contests').select('id, name, logo_path, status, event_id, finalist_count, events(name)').eq('id', contestId).maybeSingle(),
       supabase.from('categories').select('id, name, round, scored_by, guest_average, components(id, name, description, min_points, max_points, step)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
       supabase.from('judges').select('id, name, guest').eq('contest_id', contestId).order('sort'),

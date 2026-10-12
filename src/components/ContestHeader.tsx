@@ -1,8 +1,9 @@
 import { Link, Navigate, NavLink } from 'react-router-dom'
 import { useContestRole } from '../lib/useContestRole'
+import { Logo } from './Logo'
 import { h1 } from './ui'
 
-type Props = { contest: { id: string; name: string; status: string; event_id: string; events: { name: string } | null } }
+type Props = { contest: { id: string; name: string; logo_path?: string | null; status: string; event_id: string; events: { name: string } | null } }
 
 const tabs = [
   { to: 'setup', label: 'Setup' },
@@ -21,7 +22,8 @@ export function ContestHeader({ contest }: Props) {
     <div className="grid gap-3">
       <div className="grid gap-1">
         <Link to={`/e/${contest.event_id}`} className="text-sm text-accent print:hidden">← {contest.events?.name}</Link>
-        <div className="flex flex-wrap items-baseline gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Logo path={contest.logo_path} alt="" />
           <h1 className={h1}>{contest.name}</h1>
           <span className="font-mono text-sm text-muted">{contest.status}</span>
         </div>

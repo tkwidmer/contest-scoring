@@ -138,13 +138,13 @@ isOneToOne: false
                   ]
                 },"contests": {
                   Row: {
-                    "aggregation": string,"anonymize_comments": boolean,"created_at": string,"event_id": string,"final_result": Json | null,"finalist_count": number | null,"finalists_confirmed_at": string | null,"finalized_at": string | null,"id": string,"manual_winner_contestant_id": string | null,"manual_winner_reason": string | null,"name": string,"org_id": string,"prelim_aggregation": string,"prelim_carries": boolean,"report_as": string,"status": string,"threshold_pct": number | null,"threshold_single_only": boolean
+                    "aggregation": string,"anonymize_comments": boolean,"created_at": string,"event_id": string,"final_result": Json | null,"finalist_count": number | null,"finalists_confirmed_at": string | null,"finalized_at": string | null,"id": string,"logo_path": string | null,"manual_winner_contestant_id": string | null,"manual_winner_reason": string | null,"name": string,"org_id": string,"prelim_aggregation": string,"prelim_carries": boolean,"report_as": string,"status": string,"threshold_pct": number | null,"threshold_single_only": boolean
                   }
                   Insert: {
-                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id": string,"final_result"?: Json | null,"finalist_count"?: number | null,"finalists_confirmed_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name": string,"org_id": string,"prelim_aggregation"?: string,"prelim_carries"?: boolean,"report_as"?: string,"status"?: string,"threshold_pct"?: number | null,"threshold_single_only"?: boolean
+                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id": string,"final_result"?: Json | null,"finalist_count"?: number | null,"finalists_confirmed_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"logo_path"?: string | null,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name": string,"org_id": string,"prelim_aggregation"?: string,"prelim_carries"?: boolean,"report_as"?: string,"status"?: string,"threshold_pct"?: number | null,"threshold_single_only"?: boolean
                   }
                   Update: {
-                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id"?: string,"final_result"?: Json | null,"finalist_count"?: number | null,"finalists_confirmed_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name"?: string,"org_id"?: string,"prelim_aggregation"?: string,"prelim_carries"?: boolean,"report_as"?: string,"status"?: string,"threshold_pct"?: number | null,"threshold_single_only"?: boolean
+                    "aggregation"?: string,"anonymize_comments"?: boolean,"created_at"?: string,"event_id"?: string,"final_result"?: Json | null,"finalist_count"?: number | null,"finalists_confirmed_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"logo_path"?: string | null,"manual_winner_contestant_id"?: string | null,"manual_winner_reason"?: string | null,"name"?: string,"org_id"?: string,"prelim_aggregation"?: string,"prelim_carries"?: boolean,"report_as"?: string,"status"?: string,"threshold_pct"?: number | null,"threshold_single_only"?: boolean
                   }
                   Relationships: [
                     {
@@ -169,13 +169,13 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "approval_requested_at": string | null,"approval_requested_by": string | null,"approved_at": string | null,"approved_by": string | null,"archived_at": string | null,"created_at": string,"id": string,"name": string,"org_id": string,"starts_on": string | null,"venue": string | null
+                    "approval_requested_at": string | null,"approval_requested_by": string | null,"approved_at": string | null,"approved_by": string | null,"archived_at": string | null,"created_at": string,"id": string,"logo_path": string | null,"name": string,"org_id": string,"starts_on": string | null,"venue": string | null
                   }
                   Insert: {
-                    "approval_requested_at"?: string | null,"approval_requested_by"?: string | null,"approved_at"?: string | null,"approved_by"?: string | null,"archived_at"?: string | null,"created_at"?: string,"id"?: string,"name": string,"org_id": string,"starts_on"?: string | null,"venue"?: string | null
+                    "approval_requested_at"?: string | null,"approval_requested_by"?: string | null,"approved_at"?: string | null,"approved_by"?: string | null,"archived_at"?: string | null,"created_at"?: string,"id"?: string,"logo_path"?: string | null,"name": string,"org_id": string,"starts_on"?: string | null,"venue"?: string | null
                   }
                   Update: {
-                    "approval_requested_at"?: string | null,"approval_requested_by"?: string | null,"approved_at"?: string | null,"approved_by"?: string | null,"archived_at"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"org_id"?: string,"starts_on"?: string | null,"venue"?: string | null
+                    "approval_requested_at"?: string | null,"approval_requested_by"?: string | null,"approved_at"?: string | null,"approved_by"?: string | null,"archived_at"?: string | null,"created_at"?: string,"id"?: string,"logo_path"?: string | null,"name"?: string,"org_id"?: string,"starts_on"?: string | null,"venue"?: string | null
                   }
                   Relationships: [
                     {

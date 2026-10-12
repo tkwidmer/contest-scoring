@@ -41,7 +41,7 @@ export function ContestStandings() {
 
   const load = useCallback(async () => {
     const [c, cats, cs, js, rs, sc, ts, pn, fr, sub] = await Promise.all([
-      supabase.from('contests').select('id, name, status, event_id, events(name), aggregation, threshold_pct, manual_winner_contestant_id, manual_winner_reason, finalized_at, finalist_count, prelim_aggregation, prelim_carries, finalists_confirmed_at, report_as, threshold_single_only')
+      supabase.from('contests').select('id, name, logo_path, status, event_id, events(name), aggregation, threshold_pct, manual_winner_contestant_id, manual_winner_reason, finalized_at, finalist_count, prelim_aggregation, prelim_carries, finalists_confirmed_at, report_as, threshold_single_only')
         .eq('id', contestId).maybeSingle(),
       supabase.from('categories').select('id, name, round, scored_by, guest_average, deductions, components(id, min_points, max_points, step)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),

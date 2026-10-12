@@ -44,7 +44,7 @@ export function ContestScores() {
 
   const load = useCallback(async () => {
     const [c, cats, cs, js, rs, sc, pn, sub] = await Promise.all([
-      supabase.from('contests').select('id, name, status, event_id, events(name), finalist_count').eq('id', contestId).maybeSingle(),
+      supabase.from('contests').select('id, name, logo_path, status, event_id, events(name), finalist_count').eq('id', contestId).maybeSingle(),
       supabase.from('categories').select('id, name, round, scored_by, guest_average, deductions, components(id, name, min_points, max_points, step)')
         .eq('contest_id', contestId).order('sort').order('sort', { referencedTable: 'components' }),
       supabase.from('contestants').select('id, display_name, number, finalist').eq('contest_id', contestId).eq('withdrawn', false).order('sort'),

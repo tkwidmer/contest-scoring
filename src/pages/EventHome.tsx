@@ -3,11 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { TablesInsert } from '../lib/database.types'
 import { friendly } from '../lib/errors'
+import { Logo, LogoUpload } from '../components/Logo'
 import { button, buttonQuiet, card, h1, h2, iconButton, input, label } from '../components/ui'
 
-type Contest = { id: string; name: string; status: string }
+type Contest = { id: string; name: string; status: string; logo_path: string | null }
 type Source = { value: string; label: string } // '' = blank, 'c:<id>' = copy a contest, 't:<id>' = template
-type Event = { name: string; org_id: string; starts_on: string | null; venue: string | null; approval_requested_at: string | null; approved_at: string | null; archived_at: string | null; orgs: { name: string } | null }
+type Event = { name: string; logo_path: string | null; org_id: string; starts_on: string | null; venue: string | null; approval_requested_at: string | null; approved_at: string | null; archived_at: string | null; orgs: { name: string } | null }
 
 export function EventHome() {
   const { eventId = '' } = useParams()
@@ -22,8 +23,8 @@ export function EventHome() {
 
   const load = useCallback(async () => {
     const [ev, cs] = await Promise.all([
-      supabase.from('events').select('name, org_id, starts_on, venue, approval_requested_at, approved_at, archived_at, orgs(name)').eq('id', eventId).maybeSingle(),
-      supabase.from('contests').select('id, name, status').eq('event_id', eventId).order('created_at'),
+      supabase.from('events').select('name, logo_path, org_id, starts_on, venue, approval_requested_at, approved_at, archived_at, orgs(name)').eq('id', eventId).maybeSingle(),
+      supabase.from('contests').select('id, name, status, logo_path').eq('event_id', eventId).order('created_at'),
     ])
     const failed = ev.error ?? cs.error
     if (failed) return setError(friendly(failed))
@@ -81,6 +82,7 @@ export function EventHome() {
           : <Link to={`/o/${event.org_id}`} className="text-sm text-accent">← {event.orgs?.name}</Link>}
         <h1 className={h1}>{event.name}</h1>
         <p className="text-muted">{[event.starts_on, event.venue].filter(Boolean).join(' · ')}</p>
+        <LogoUpload title="Event logo" orgId={event.org_id} table="events" id={eventId} path={event.logo_path} onChange={load} />
       </div>
 
       {!inspecting && <Approval event={event} onRequest={async () => {
@@ -102,7 +104,7 @@ export function EventHome() {
             {contests.map(c => (
               <li key={c.id} className="flex items-stretch gap-2">
                 <Link to={`/c/${c.id}/setup`} className={`${card} flex flex-1 justify-between gap-2 px-4 py-3 hover:border-accent`}>
-                  <span className="font-medium">{c.name}</span>
+                  <span className="flex items-center gap-3"><Logo path={c.logo_path} alt="" className="h-8" /><span className="font-medium">{c.name}</span></span>
                   <span className="font-mono text-sm text-muted">{c.status}</span>
                 </Link>
                 {c.status === 'draft' && !inspecting && <button type="button" className={iconButton} aria-label={`Delete ${c.name}`}
