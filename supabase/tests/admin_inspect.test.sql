@@ -64,7 +64,8 @@ select is_empty($$ select 1 from public.sheet_audit $$, 'or the sheet audit trai
 -- ── and cannot change any of it ──
 select throws_ok($$ insert into public.events (org_id, name) values (current_setting('test.org')::uuid, 'Sneaky') $$, '42501', null, 'admin cannot add an event');
 select throws_ok($$ insert into public.contests (event_id, name) select id, 'Sneaky' from public.events $$, '42501', null, 'admin cannot add a contest');
-select throws_ok($$ insert into public.penalties (contestant_id, category_id, tier) select c.id, k.id, 0 from public.contestants c, public.categories k $$,
+select throws_ok($$ insert into public.penalties (contestant_id, category_id, tier) select c.id, k.id, 0 from public.contestants c, public.categories k
+  where c.contest_id = current_setting('test.c')::uuid and k.contest_id = c.contest_id $$,
   '42501', null, 'admin cannot apply a deduction');
 select throws_ok($$ insert into public.judges (contest_id, name) values (current_setting('test.c')::uuid, 'Sneaky') $$, '42501', null, 'admin cannot add a judge');
 update public.scores set value = 0; -- RLS filters each of these to zero rows
