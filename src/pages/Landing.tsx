@@ -84,6 +84,29 @@ export function Landing() {
           </div>
         </section>
 
+        <section className="border-b border-rule">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14">
+            <h2 className="font-display text-3xl font-extrabold uppercase sm:text-4xl">Contests run on Tallymaster.top</h2>
+            <ul className="flex flex-wrap gap-8">
+              {contests.map(c => {
+                const body = (
+                  <>
+                    <img src={c.logo} alt="" className="size-32 rounded-full" />
+                    <span className="font-semibold">{c.name}</span>
+                  </>
+                )
+                return (
+                  <li key={c.name}>
+                    {c.href
+                      ? <a href={c.href} className="grid w-40 justify-items-center gap-2 text-center hover:text-accent">{body}</a>
+                      : <div className="grid w-40 justify-items-center gap-2 text-center">{body}</div>}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        </section>
+
         <section id="how" className="mx-auto grid max-w-6xl gap-10 px-4 py-14">
           <h2 className="font-display text-3xl font-extrabold uppercase sm:text-4xl">How it works</h2>
           <ol className="grid gap-6 md:grid-cols-3">
@@ -104,29 +127,6 @@ export function Landing() {
               <Shot name="results" alt="The public results page for a fictional contest: the winner and the full standings by category" />
               <figcaption className="text-sm text-muted">Publish the results to a public page anyone can open, no sign-in needed.</figcaption>
             </figure>
-          </div>
-        </section>
-
-        <section className="border-t border-rule">
-          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14">
-            <h2 className="font-display text-3xl font-extrabold uppercase sm:text-4xl">Contests run on Tallymaster.top</h2>
-            <ul className="flex flex-wrap gap-8">
-              {contests.map(c => {
-                const body = (
-                  <>
-                    <img src={c.logo} alt="" className="size-32 rounded-full" />
-                    <span className="font-semibold">{c.name}</span>
-                  </>
-                )
-                return (
-                  <li key={c.name}>
-                    {c.href
-                      ? <a href={c.href} className="grid w-40 justify-items-center gap-2 text-center hover:text-accent">{body}</a>
-                      : <div className="grid w-40 justify-items-center gap-2 text-center">{body}</div>}
-                  </li>
-                )
-              })}
-            </ul>
           </div>
         </section>
 
