@@ -17,11 +17,12 @@ export function Home() {
     supabase.rpc('claim_invites').then(async () => {
       const uid = (await supabase.auth.getUser()).data.user?.id ?? ''
       const [o, j] = await Promise.all([
-        supabase.from('orgs').select('id, name').order('name'),
+        // Memberships, not orgs: platform admins can read every org (to inspect them from /admin) but only own some.
+        supabase.from('org_members').select('orgs(id, name)').eq('user_id', uid),
         supabase.from('judges').select('id, contests(id, name, status, events(name))').eq('user_id', uid),
       ])
       if (o.error ?? j.error) setError((o.error ?? j.error)!.message)
-      setOrgs(o.data ?? [])
+      setOrgs((o.data ?? []).flatMap(m => (m.orgs ? [m.orgs] : [])).sort((a, b) => a.name.localeCompare(b.name)))
       setSeats(j.data ?? [])
     })
   }, [])
