@@ -36,7 +36,7 @@ const features: { title: string; body: string }[] = [
 
 // Contests that have run on Tallymaster.top. Append a line (and drop the logo in public/contests/) as new contests onboard.
 const contests: { name: string; logo: string; href?: string }[] = [
-  { name: 'San Diego Bootblack & Leather', logo: '/contests/sdbbl.jpg' },
+  { name: 'San Diego Bootblack & Leather', logo: '/contests/sdbbl.png' },
 ]
 
 const steps = [
