@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(29);
+select plan(30);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'alice@test.dev'),   -- producer
@@ -92,6 +92,7 @@ select throws_ok($$ select public.publish_contest(current_setting('test.c')::uui
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
 update public.contests set logo_path = 'o/contest.png' where id = current_setting('test.c')::uuid;
 update public.events set logo_path = 'o/event.png';
+select lives_ok($$ select logo_path from public.contests $$, 'members can read the contest logo path');
 select lives_ok($$ select public.publish_contest(current_setting('test.c')::uuid, false) $$, 'producer publishes the winner only');
 select is((select status from public.contests where id = current_setting('test.c')::uuid), 'published', 'the contest is published');
 

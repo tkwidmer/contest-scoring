@@ -5,6 +5,8 @@ alter table public.events add column logo_path text;
 alter table public.contests add column logo_path text;
 grant update (logo_path) on public.events to authenticated;
 grant update (logo_path) on public.contests to authenticated;
+-- contests has column-level select grants (final_result is members-only), so a new readable column needs its own.
+grant select (logo_path) on public.contests to authenticated;
 
 -- No SVG: it can carry script, and these files are served from our storage domain.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
