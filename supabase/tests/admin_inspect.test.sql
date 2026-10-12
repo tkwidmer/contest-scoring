@@ -25,11 +25,18 @@ insert into public.recusals (judge_id, contestant_id) select j.id, c.id from pub
 
 -- ── the platform admin reads the whole configuration ──
 select set_config('request.jwt.claims', '{"sub":"99999999-9999-9999-9999-999999999999","role":"authenticated"}', true);
-select results_eq($$ select (select count(*) from public.orgs), (select count(*) from public.events), (select count(*) from public.contests) $$,
+-- Scoped to Alice's rows: the seed data from other organizations is visible to the admin too.
+select results_eq($$ select (select count(*) from public.orgs where id = current_setting('test.org')::uuid),
+                            (select count(*) from public.events where org_id = current_setting('test.org')::uuid),
+                            (select count(*) from public.contests where id = current_setting('test.c')::uuid) $$,
   $$ values (1::bigint, 1::bigint, 1::bigint) $$, 'admin reads the org, event and contest');
-select results_eq($$ select (select count(*) from public.categories), (select count(*) from public.components), (select count(*) from public.tiebreak_steps) $$,
+select results_eq($$ select (select count(*) from public.categories where contest_id = current_setting('test.c')::uuid),
+                            (select count(*) from public.components where category_id in (select id from public.categories where contest_id = current_setting('test.c')::uuid)),
+                            (select count(*) from public.tiebreak_steps where contest_id = current_setting('test.c')::uuid) $$,
   $$ values (1::bigint, 1::bigint, 1::bigint) $$, 'admin reads the scoresheet and tiebreaks');
-select results_eq($$ select (select count(*) from public.contestants), (select count(*) from public.judges), (select count(*) from public.recusals) $$,
+select results_eq($$ select (select count(*) from public.contestants where contest_id = current_setting('test.c')::uuid),
+                            (select count(*) from public.judges where contest_id = current_setting('test.c')::uuid),
+                            (select count(*) from public.recusals where judge_id in (select id from public.judges where contest_id = current_setting('test.c')::uuid)) $$,
   $$ values (1::bigint, 1::bigint, 1::bigint) $$, 'admin reads contestants, judges and recusals');
 select is_empty($$ select 1 from public.contestant_contacts $$, 'but not contestant emails');
 
