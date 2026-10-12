@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
 import { buttonQuiet, button, card, h1 } from '../components/ui'
@@ -28,7 +29,7 @@ export function Admin() {
   return (
     <div className="grid gap-6">
       <h1 className={h1}>Event approvals</h1>
-      <p className="max-w-prose text-muted">Approve an event once its $100 fee is paid. Requests come first; email the requester how to pay.</p>
+      <p className="max-w-prose text-muted">Approve an event once its $100 fee is paid. Requests come first; email the requester how to pay. Open an event to inspect its contests (read-only).</p>
       {error && <p role="alert" className="text-danger">{error}</p>}
       {rows && (
         <div className={`${card} overflow-x-auto`}>
@@ -43,7 +44,7 @@ export function Admin() {
             <tbody>
               {rows.map(r => (
                 <tr key={r.event_id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{r.event_name}
+                  <td className="px-3 py-2"><Link to={`/e/${r.event_id}`} className="text-accent">{r.event_name}</Link>
                     <input type="date" aria-label={`${r.event_name} date`} defaultValue={r.starts_on ?? ''} key={r.starts_on ?? ''}
                       className="block rounded border border-rule bg-surface px-1 text-xs text-muted"
                       onBlur={async e => {

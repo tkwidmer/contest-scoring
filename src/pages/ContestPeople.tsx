@@ -6,6 +6,7 @@ import { useWrites } from '../lib/useWrites'
 import { copyInvite, sendSignInLink } from '../lib/invites'
 import { parseContestants, parseJudges } from '../lib/bulk'
 import { ContestHeader } from '../components/ContestHeader'
+import { useContestRole } from '../lib/useContestRole'
 import { button, buttonQuiet, card, h2, iconButton, input, label } from '../components/ui'
 
 type Contest = { id: string; name: string; status: string; org_id: string; event_id: string; events: { name: string } | null }
@@ -57,6 +58,7 @@ export function ContestPeople() {
   useEffect(() => { load() }, [load])
 
   const { busy, run, saveField } = useWrites(load, setError)
+  const inspecting = useContestRole(contestId) === 'admin' // platform admins look but don't touch
 
   if (!contest) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
@@ -127,7 +129,7 @@ export function ContestPeople() {
       {error && <p role="alert" className="rounded border border-danger px-4 py-3 text-danger">{error}</p>}
       {notice && <p role="status" className="rounded border border-accent px-4 py-3">{notice}</p>}
 
-      <fieldset disabled={busy} className="grid gap-10">
+      <fieldset disabled={busy || inspecting} className="grid gap-10">
         {/* ── Contestants ── */}
         <section className="grid gap-3">
           <h2 className={h2}>Contestants · {contestants.filter(c => !c.withdrawn).length}</h2>

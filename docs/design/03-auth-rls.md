@@ -40,6 +40,8 @@ P = producer of the owning org, T = tabulator of that org, J = judge (only their
 | `published_results` | **everyone, including anon** | Written only by `publish_contest` / `unpublish_contest` (P). The snapshot is built in SQL from the finalized result: names, ranks, winner, and optionally totals by category. Never judges, per-judge scores, emails or comments. |
 | `templates` | org members for `private`; everyone signed in for `public` and `curated` | P for org rows. Platform admin for `curated`. |
 
+Platform admins also read (select only) `orgs`, `events`, `contests`, `categories`, `components`, `tiebreak_steps`, `contestants`, `judges` and `recusals` of every organization, so they can open a contest from `/admin` and inspect its Setup and People tabs read-only. They get no write policy, and no access to contacts, scores, comments or audit tables. Tests: `supabase/tests/admin_inspect.test.sql`.
+
 Invariants the policies must keep:
 - Judges never see other judges' scores, standings, or contestant emails.
 - Tabulators can't change contest structure, can't unlock sheets, and can't publish.

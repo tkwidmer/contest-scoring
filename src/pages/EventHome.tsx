@@ -17,6 +17,7 @@ export function EventHome() {
   const [name, setName] = useState('')
   const [source, setSource] = useState('')
   const [sources, setSources] = useState<{ group: string; options: Source[] }[]>([])
+  const [inspecting, setInspecting] = useState(false) // a platform admin looking at someone else's event
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -27,6 +28,10 @@ export function EventHome() {
     const failed = ev.error ?? cs.error
     if (failed) return setError(friendly(failed))
     if (!ev.data) return setError("This event doesn't exist, or you're not a member of its organization.")
+    // RLS shows an event only to its members and to platform admins, so a non-member here is an admin inspecting.
+    const me = (await supabase.auth.getUser()).data.user?.id ?? ''
+    const member = await supabase.from('org_members').select('role').eq('org_id', ev.data.org_id).eq('user_id', me).maybeSingle()
+    setInspecting(!member.data)
     setEvent(ev.data)
     setContests(cs.data ?? [])
     const [past, tpl] = await Promise.all([
@@ -71,18 +76,20 @@ export function EventHome() {
   return (
     <div className="grid gap-10">
       <div className="grid gap-1">
-        <Link to={`/o/${event.org_id}`} className="text-sm text-accent">← {event.orgs?.name}</Link>
+        {inspecting
+          ? <Link to="/admin" className="text-sm text-accent">← Event approvals · {event.orgs?.name}</Link>
+          : <Link to={`/o/${event.org_id}`} className="text-sm text-accent">← {event.orgs?.name}</Link>}
         <h1 className={h1}>{event.name}</h1>
         <p className="text-muted">{[event.starts_on, event.venue].filter(Boolean).join(' · ')}</p>
       </div>
 
-      <Approval event={event} onRequest={async () => {
+      {!inspecting && <Approval event={event} onRequest={async () => {
         const { error } = await supabase.rpc('request_event_approval', { p_event: eventId })
         if (error) setError(friendly(error)); else load()
       }} onDate={async date => {
         const { error } = await supabase.from('events').update({ starts_on: date || null }).eq('id', eventId)
         if (error) setError(friendly(error)); else load()
-      }} />
+      }} />}
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       {event.archived_at && <p className="text-sm text-muted">This event is archived: it's hidden from the organization's list.</p>}
 
@@ -98,13 +105,13 @@ export function EventHome() {
                   <span className="font-medium">{c.name}</span>
                   <span className="font-mono text-sm text-muted">{c.status}</span>
                 </Link>
-                {c.status === 'draft' && <button type="button" className={iconButton} aria-label={`Delete ${c.name}`}
+                {c.status === 'draft' && !inspecting && <button type="button" className={iconButton} aria-label={`Delete ${c.name}`}
                   onClick={() => window.confirm(`Delete the draft contest ${c.name}? Its setup, contestants and judges are deleted too.`) && remove('contests', c.id)}>✕</button>}
               </li>
             ))}
           </ul>
         )}
-        <form onSubmit={createContest} className="grid max-w-2xl gap-2 sm:grid-cols-[2fr_2fr_auto] sm:items-end">
+        {!inspecting && <><form onSubmit={createContest} className="grid max-w-2xl gap-2 sm:grid-cols-[2fr_2fr_auto] sm:items-end">
           <div className="grid gap-1">
             <label htmlFor="contest-name" className={label}>New contest (title)</label>
             <input id="contest-name" required maxLength={120} placeholder="International Mr. Leather" className={input}
@@ -123,9 +130,9 @@ export function EventHome() {
           </div>
           <button className={button}>Add contest</button>
         </form>
-        <p className="text-xs text-muted">Templates and copies bring the scoresheet, scoring method, minimum and tiebreaks. Contestants and judges are added fresh.</p>
+        <p className="text-xs text-muted">Templates and copies bring the scoresheet, scoring method, minimum and tiebreaks. Contestants and judges are added fresh.</p></>}
       </section>
-      <section className="flex flex-wrap gap-2 border-t border-rule pt-4">
+      {!inspecting && <section className="flex flex-wrap gap-2 border-t border-rule pt-4">
         <button type="button" className={buttonQuiet} onClick={async () => {
           const { error } = await supabase.from('events').update({ archived_at: event.archived_at ? null : new Date().toISOString() }).eq('id', eventId)
           if (error) setError(friendly(error)); else load()
@@ -137,7 +144,7 @@ export function EventHome() {
             if (error) setError(friendly(error)); else navigate(`/o/${event.org_id}`)
           }}>Delete event</button>
         )}
-      </section>
+      </section>}
     </div>
   )
 }
