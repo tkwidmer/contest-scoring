@@ -34,6 +34,11 @@ const features: { title: string; body: string }[] = [
   },
 ]
 
+// Contests that have run on Tallymaster.top. Append a line (and drop the logo in public/contests/) as new contests onboard.
+const contests: { name: string; logo: string; href?: string }[] = [
+  { name: 'San Diego Bootblack & Leather', logo: '/contests/sdbbl.png' },
+]
+
 const steps = [
   ['Set up', 'Start from an official template (IML, IMBB, IMsL, IMsBB, San Diego, SF Bootblack) or build your own categories, scoring and tiebreaks. Add your contestants and invite each judge by email.'],
   ['Judges score', 'Judges sign in on their own phones, score each contestant category by category, add comments and submit. A submitted sheet locks. Scores save as they’re typed and survive patchy hotel Wi-Fi, and the tally team can still enter paper sheets.'],
@@ -79,30 +84,55 @@ export function Landing() {
           </div>
         </section>
 
-        <section id="how" className="mx-auto grid max-w-6xl gap-10 px-4 py-14">
-          <h2 className="font-display text-3xl font-extrabold uppercase sm:text-4xl">How it works</h2>
-          <ol className="grid gap-6 md:grid-cols-3">
-            {steps.map(([title, body], i) => (
-              <li key={title} className="grid content-start gap-2">
-                <span className="font-display text-5xl font-extrabold text-heart">{i + 1}</span>
-                <h3 className="text-lg font-semibold">{title}</h3>
-                <p className="text-muted">{body}</p>
-              </li>
-            ))}
-          </ol>
-          <div className="grid items-start gap-8 md:grid-cols-[1fr_3fr]">
-            <figure className="mx-auto grid max-w-64 gap-2">
-              <Shot name="judge-phone" alt="A judge's own scoresheet on a phone, with submitted categories locked" className="rounded-2xl" />
-              <figcaption className="text-sm text-muted">Each judge scores on their own phone and sees only their own scores.</figcaption>
-            </figure>
-            <figure className="grid gap-2">
-              <Shot name="results" alt="The public results page for a fictional contest: the winner and the full standings by category" />
-              <figcaption className="text-sm text-muted">Publish the results to a public page anyone can open, no sign-in needed.</figcaption>
-            </figure>
+        <section>
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14">
+            <h2 className="font-display text-3xl font-extrabold uppercase sm:text-4xl">Contests run on Tallymaster.top</h2>
+            <ul className="flex flex-wrap gap-8">
+              {contests.map(c => {
+                const body = (
+                  <>
+                    <img src={c.logo} alt="" className="size-32 rounded-full" />
+                    <span className="font-semibold">{c.name}</span>
+                  </>
+                )
+                return (
+                  <li key={c.name}>
+                    {c.href
+                      ? <a href={c.href} className="grid w-40 justify-items-center gap-2 text-center hover:text-accent">{body}</a>
+                      : <div className="grid w-40 justify-items-center gap-2 text-center">{body}</div>}
+                  </li>
+                )
+              })}
+            </ul>
           </div>
         </section>
 
-        <section className="border-t border-rule bg-surface">
+        <section id="how" className="border-y border-rule bg-surface">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14">
+            <h2 className="font-display text-3xl font-extrabold uppercase sm:text-4xl">How it works</h2>
+            <ol className="grid gap-6 md:grid-cols-3">
+              {steps.map(([title, body], i) => (
+                <li key={title} className="grid content-start gap-2">
+                  <span className="font-display text-5xl font-extrabold text-heart">{i + 1}</span>
+                  <h3 className="text-lg font-semibold">{title}</h3>
+                  <p className="text-muted">{body}</p>
+                </li>
+              ))}
+            </ol>
+            <div className="grid items-start gap-8 md:grid-cols-[1fr_3fr]">
+              <figure className="mx-auto grid max-w-64 gap-2">
+                <Shot name="judge-phone" alt="A judge's own scoresheet on a phone, with submitted categories locked" className="rounded-2xl" />
+                <figcaption className="text-sm text-muted">Each judge scores on their own phone and sees only their own scores.</figcaption>
+              </figure>
+              <figure className="grid gap-2">
+                <Shot name="results" alt="The public results page for a fictional contest: the winner and the full standings by category" />
+                <figcaption className="text-sm text-muted">Publish the results to a public page anyone can open, no sign-in needed.</figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+
+        <section>
           <div className="mx-auto grid max-w-6xl justify-items-start gap-4 px-4 py-14">
             <h2 className="font-display text-3xl font-extrabold uppercase sm:text-4xl">Run your next contest on Tallymaster.top</h2>
             <p className="max-w-prose text-muted">No more tally room spreadsheets. Sign in with your email to set up your organization and first contest.
