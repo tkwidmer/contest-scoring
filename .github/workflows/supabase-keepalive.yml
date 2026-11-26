@@ -1,17 +1,21 @@
 name: Supabase keepalive
 
-# Free-tier projects pause after 7 days without activity. One anonymous read every 3 days keeps it up.
+# Free-tier projects pause on low activity over 7 days; Supabase says "a few user requests to the database each day"
+# is typically enough. One read every 3 days was not (paused 2026-11-24). ponytail: Pro plan is the only guarantee.
 on:
   schedule:
-    - cron: '17 9 */3 * *'
+    - cron: '17 9 * * *'
   workflow_dispatch: {}
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Read one published result
+      - name: Read published results a few times
         run: |
-          curl --fail-with-body -sS \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/published_results?select=contest_id&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"
+          for i in 1 2 3; do
+            curl --fail-with-body -sS \
+              "${{ secrets.SUPABASE_URL }}/rest/v1/published_results?select=contest_id&limit=1" \
+              -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"
+            sleep 60
+          done
