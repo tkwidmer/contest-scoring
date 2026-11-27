@@ -152,7 +152,7 @@ export function ContestScores() {
     <div className="grid gap-6">
       <ContestHeader contest={contest} />
       {contest.status === 'draft' && (
-        <p className={`${card} px-4 py-3`}>Scoring hasn't started yet. Start it from <Link to={`/c/${contest.id}/setup`} className="text-accent underline">Setup</Link> once the scoresheet and people are ready.</p>
+        <p className={`${card} px-4 py-3`}>Scoring hasn't started yet. Start it from <Link to={`/c/${contest.id}/setup`} className="text-accent underline">Setup</Link> once the scoresheet and people are ready. To try the contest out first, fill <Link to={`/c/${contest.id}/standings`} className="text-accent underline">Standings</Link> with sample scores.</p>
       )}
       {(contest.status === 'finalized' || contest.status === 'published') && (
         <p className={`${card} px-4 py-3`}>🔒 This contest is {contest.status}. Scores are read-only.</p>
