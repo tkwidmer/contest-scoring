@@ -679,6 +679,13 @@
               "title": "Platform admin inspects any contest (setup, people, live scores, standings) read-only, from the approvals page",
               "status": "done",
               "doc": "design/03-auth-rls.md"
+            },
+            {
+              "id": "P4.4.5",
+              "title": "Sandbox: draft contests fill Standings with sample scores (in the browser, never saved), with Clear all scores",
+              "status": "done",
+              "doc": "design/00-overview.md",
+              "note": "D28"
             }
           ]
         }

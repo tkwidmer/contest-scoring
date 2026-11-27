@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { friendly } from '../lib/errors'
 import { useWrites } from '../lib/useWrites'
 import { CROSS_PANEL, PRODUCER, computeContest, type Aggregation, type Deduction, type Result, type Rounds, type ScoringInput } from '../lib/scoring'
+import { sampleScores } from '../lib/scoring/sample'
 import { ContestHeader } from '../components/ContestHeader'
 import { useContestRole } from '../lib/useContestRole'
 import { button, buttonQuiet, card, h2, input } from '../components/ui'
@@ -103,11 +104,21 @@ export function ContestStandings() {
     return () => { clearTimeout(timer); supabase.removeChannel(channel) }
   }, [contestId, load])
 
+  // Sandbox (draft contests only): made-up scores, generated here from a seed and never saved.
+  const sandboxKey = `sandbox:${contestId}`
+  const [seed, setSeed] = useState(() => { const v = sessionStorage.getItem(sandboxKey); return v ? Number(v) : null })
+  const setSandbox = (v: number | null) => {
+    if (v == null) sessionStorage.removeItem(sandboxKey); else sessionStorage.setItem(sandboxKey, String(v))
+    setSeed(v)
+  }
+
   const { busy, run } = useWrites(load, setError)
   const inspecting = useContestRole(contestId) === 'admin' // platform admins watch standings but don't act on them
 
   if (!contest || !input_ || !names) return error ? <p role="alert" className="text-danger">{error}</p> : <p className="text-muted">Loading…</p>
 
+  const sandbox = contest.status === 'draft' && seed != null
+  const data = sandbox ? { ...input_, scores: sampleScores(input_, seed) } : input_
   const hasRounds = contest.finalist_count != null
   const rounds: Rounds | null = hasRounds ? {
     prelimCategoryIds: names.categories.filter(c => c.round === 'prelim').map(c => c.id),
@@ -117,7 +128,12 @@ export function ContestStandings() {
     finalistIds: contest.finalists_confirmed_at ? confirmed : null,
     manualFinalistIds: cutPicks.length ? cutPicks : confirmed, // after confirming, the confirmed pick stands
   } : null
-  const live = computeContest(input_, rounds)
+  let live = computeContest(data, rounds)
+  // Nothing can be confirmed in a draft, so the sandbox takes the proposed cut as the finalists.
+  const sandboxCut = (sandbox && live.prelim?.cut.proposed) || null
+  if (sandboxCut) live = computeContest(data, { ...rounds!, finalistIds: sandboxCut })
+  const finalists = sandboxCut ?? confirmed
+  const cutDone = sandboxCut != null || contest.finalists_confirmed_at != null
   // Once finalized, show the frozen finals result, not a recomputation.
   const finalized = contest.status === 'finalized' || contest.status === 'published'
   const final: Result | null = finalized && contest.final_result ? contest.final_result as unknown as Result : live.final
@@ -126,9 +142,9 @@ export function ContestStandings() {
   const scaleNote = contest.report_as === 'average' ? ' · category scores are the average of the counted judges' : ''
 
   // Score cells still to enter, per judge and category (recused cells and non-finalists in the finals don't count).
-  const recused = new Set(input_.recusals.map(r => `${r.judgeId}|${r.contestantId}`))
-  const entered = new Set(input_.scores.map(s => `${s.judgeId}|${s.contestantId}|${s.componentId}`))
-  const active = input_.contestants.filter(c => !c.withdrawn)
+  const recused = new Set(data.recusals.map(r => `${r.judgeId}|${r.contestantId}`))
+  const entered = new Set(data.scores.map(s => `${s.judgeId}|${s.contestantId}|${s.componentId}`))
+  const active = data.contestants.filter(c => !c.withdrawn)
   // Rows of the progress grid: each judge, plus "Producer" when some categories are producer-entered.
   const fillers = [...names.judges, ...(names.categories.some(c => c.scored_by === 'producer') ? [{ id: PRODUCER, name: 'Producer', guest: false }] : [])]
   const progress = (judgeId: string, catId: string) => {
@@ -137,8 +153,8 @@ export function ContestStandings() {
     const fills = judgeId === PRODUCER ? cat.scored_by === 'producer'
       : cat.scored_by === 'cross_panel' ? guest : cat.scored_by === 'judges' && (!guest || cat.guest_average)
     if (!fills) return { done: 0, total: 0, sheets: 0, locked: 0 }
-    const comps = input_.categories.find(c => c.id === catId)!.components
-    const who = hasRounds && cat.round === 'final' ? active.filter(c => confirmed.includes(c.id)) : active
+    const comps = data.categories.find(c => c.id === catId)!.components
+    const who = hasRounds && cat.round === 'final' ? active.filter(c => finalists.includes(c.id)) : active
     const key = judgeId === PRODUCER ? 'null' : judgeId
     let done = 0, total = 0, sheets = 0, locked = 0
     for (const c of who) {
@@ -165,7 +181,7 @@ export function ContestStandings() {
     run(supabase.rpc('confirm_finalists', { p_contest: contest.id, p_finalists: ids })).then(ok => ok && setCutPicks([]))
 
   const banner = (() => {
-    if (hasRounds && !contest.finalists_confirmed_at) {
+    if (hasRounds && !cutDone) {
       const cut = prelim!.cut
       if (!cut.complete) return <><strong>Preliminaries in progress</strong><span className="text-muted"> · {missingIn('prelim')} prelim score{missingIn('prelim') === 1 ? '' : 's'} still to enter.</span></>
       if (!cut.proposed) return <><strong>Tie at the cut line</strong><span className="text-muted"> · {cut.tied.map(name).join(', ')} are tied for {cut.slots} finalist spot{cut.slots === 1 ? '' : 's'}. Choose below.</span></>
@@ -198,13 +214,26 @@ export function ContestStandings() {
       categories: names.categories.filter(c => !hasRounds || contest.prelim_carries || c.round === 'final'),
       note: aggregationText[contest.aggregation]! + scaleNote }] : []),
     ...(prelim ? [{ title: 'Preliminaries', result: prelim, categories: names.categories.filter(c => c.round === 'prelim'),
-      note: aggregationText[contest.prelim_aggregation]! + scaleNote, finalists: contest.finalists_confirmed_at ? confirmed : null }] : []),
+      note: aggregationText[contest.prelim_aggregation]! + scaleNote, finalists: cutDone ? finalists : null }] : []),
   ]
 
   return (<>
     <div className="grid gap-6 print:hidden">
       <ContestHeader contest={contest} />
       {error && <p role="alert" className="rounded border border-danger px-4 py-3 text-danger print:hidden">{error}</p>}
+
+      {contest.status === 'draft' && (
+        <div className={`${card} flex flex-wrap items-center gap-3 px-4 py-3 print:hidden`}>
+          <p className="min-w-60 flex-1 text-sm">
+            <strong>Sandbox.</strong> {sandbox
+              ? 'These standings use made-up sample scores. Change the scoring rules in Setup and come back to see the effect. Nothing is saved, and real scoring starts empty.'
+              : 'Fill the scoresheet with made-up scores to see how standings, the minimum and tiebreaks work for this contest. Nothing is saved.'}
+          </p>
+          <button className={sandbox ? buttonQuiet : button} onClick={() => setSandbox(Math.floor(Math.random() * 2 ** 31))}>
+            {sandbox ? 'New sample scores' : 'Fill with sample scores'}</button>
+          {sandbox && <button className={buttonQuiet} onClick={() => setSandbox(null)}>Clear all scores</button>}
+        </div>
+      )}
 
       <div className={`${card} grid gap-1 px-4 py-4 text-lg`} role="status">
         <p>{banner}</p>
@@ -257,7 +286,7 @@ export function ContestStandings() {
         <section className="grid gap-2">
           <StandingsTable title="Preliminaries" result={prelim} names={names} cutAfter={contest.finalist_count!}
             categories={names.categories.filter(c => c.round === 'prelim')} note={aggregationText[contest.prelim_aggregation]! + scaleNote}
-            finalists={contest.finalists_confirmed_at ? confirmed : null} />
+            finalists={cutDone ? finalists : null} />
           {!finalized && prelim.cut.complete && (
             <div className={`${card} grid gap-3 px-4 py-3 print:hidden`}>
               {prelim.cut.tied.length > 0 && (
@@ -327,7 +356,7 @@ export function ContestStandings() {
         </div>
       </section>
     </div>
-    <PrintTally contest={contest} banner={banner} sections={sections} names={names} />
+    <PrintTally contest={contest} banner={sandbox ? <><strong>Sample scores, not real results.</strong> {banner}</> : banner} sections={sections} names={names} />
   </>)
 }
 
